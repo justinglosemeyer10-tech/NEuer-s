@@ -560,20 +560,6 @@ const guardWeapons=[['Magi','Schwert','Messer'],['Katana','Schild','Stab'],['Axt
 function academyProf(j){try{let main=JSON.parse(localStorage.getItem('RPGV33')||'{}');let names=['Selene','Thorne','Lysandra'];let target=names[j].toLowerCase();let seen=new Set();function seek(v,depth){if(!v||typeof v!=='object'||depth>6||seen.has(v))return null;seen.add(v);if(!Array.isArray(v)){let name=String(v.name||v.n||'').toLowerCase();if(name.includes(target)){let raw=v.stats||v.attributes||v.values||v;let keys=[['str','strength','staerke','stärke'],['mag','magic','magie'],['spd','speed','geschwindigkeit'],['end','stamina','ausdauer'],['hp','life','leben'],['int','intelligence','intelligenz']];let arr=Array.isArray(raw)?raw.slice(0,6):keys.map(opts=>{let k=Object.keys(raw).find(k=>opts.includes(k.toLowerCase()));return k?Number(raw[k]):NaN});if(arr.length===6&&arr.every(x=>Number.isFinite(Number(x))))return arr.map(Number)}}for(const child of Object.values(v)){let result=seek(child,depth+1);if(result)return result}return null}return seek(main,0)}catch(e){return null}}
 function fresh(){let tiles=Array(N*N).fill(-1),buildings=Array(N*N).fill(-1),realms=DEF.map((d,i)=>({name:d[0],focus:FOCUS[rand(0,3)],influence:30,soldiers:1,training:0,stats:stats(rand(350,650)),ruler:{name:d[5],stats:stats(rand(6400,7000))},heir:{name:d[5]+' II.',stats:stats(rand(4800,5600))},guards:guardNames[i].map((name,j)=>({name,weapon:guardWeapons[i][j],stats:i===0?stats([6779,6771,6697][j]):stats(rand(2800,3600)),alive:true,academy:i===0}))}));DEF.forEach((d,i)=>{let rad=i===0?3:2;for(let y=Math.max(0,d[4]-rad);y<=Math.min(99,d[4]+rad);y++)for(let x=Math.max(0,d[3]-rad);x<=Math.min(99,d[3]+rad);x++)if((x-d[3])**2+(y-d[4])**2<=rad*rad)tiles[pos(x,y)]=i});return {version:2,lastDate:date(),tiles,buildings,realms,log:['Die neun Reiche beginnen mit jeweils einem Soldaten.'],battles:[],days:0}}
 let K;try{K=JSON.parse(localStorage.getItem(KEY))}catch(e){}if(!K||K.version!==2||K.tiles?.length!==10000)K=fresh();
-// Repariert ausschließlich fehlende oder vollständig auf 0 stehende Soldatenwerte älterer Spielstände.
-function repairSoldierStats(){
-  let changed=false;
-  for(let i=0;i<K.realms.length;i++){
-    const r=K.realms[i],raw=r.stats;
-    const valid=Array.isArray(raw)&&raw.length===6&&raw.every(v=>Number.isFinite(Number(v))&&Number(v)>=0);
-    if(valid&&raw.some(v=>Number(v)>0))continue;
-    const baseline=[85,70,90,85,105,75];
-    const days=Math.max(0,Math.min(3650,Number(K.days)||0));
-    r.stats=baseline.map((v,j)=>v+Math.round(days*(1.2+(j%3)*.2))+Math.max(0,Number(r.training)||0));
-    changed=true;
-  }
-  if(changed){K.log=Array.isArray(K.log)?K.log:[];K.log.unshift('🛠️ Fehlende Soldatenwerte wiederhergestellt.');save()}
-}
 const UI={selected:0};window.KUI=UI;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(K))}catch(e){console.warn('Königreiche konnten nicht gespeichert werden',e)}}
 function log(t){K.log.unshift(t);K.log.length=Math.min(180,K.log.length)}
@@ -640,7 +626,7 @@ window.kingdomLoss=()=>loss(Number(el('kLoss')?.value));window.kingdomQuickLoss=
 window.kingdomGuardLoss=j=>{let g=K.realms[UI.selected].guards[j];if(g?.alive&&confirm(g.name+' als besiegt markieren?')){g.alive=false;save();render()}};
 window.kingdomRestoreGuard=j=>{let g=K.realms[UI.selected].guards[j];if(g&&!g.alive&&confirm(g.name+' wiederherstellen?')){g.alive=true;save();render()}};
 window.kingdomBattle=id=>{let b=K.battles.find(x=>x.id===id);if(!b)return;alert('Tag '+b.day+' · '+K.realms[b.a].name+' gegen '+K.realms[b.b].name+'\nEinsatz: '+b.nA+' / '+b.nB+'\n'+b.rounds.map((r,j)=>'Runde '+(j+1)+': '+r.dA+'+'+r.bonusA+' gegen '+r.dB+'+'+r.bonusB+' · Verluste '+r.la+'/'+r.lb).join('\n')+'\nGesamtverluste: '+b.lossA+'/'+b.lossB+'\nEroberte Felder: '+b.taken.length)};
-function init(){repairSoldierStats();migrateKingdomGrowth();let c=el('kCanvas');if(!c)return;c.addEventListener('click',e=>{let b=c.getBoundingClientRect(),x=Math.min(99,Math.max(0,Math.floor((e.clientX-b.left)/b.width*100))),y=Math.min(99,Math.max(0,Math.floor((e.clientY-b.top)/b.height*100))),i=K.tiles[pos(x,y)];if(i>=0){UI.selected=i;render()}});advance();render();document.addEventListener('visibilitychange',()=>{if(!document.hidden){advance();if(el('kingdoms')?.classList.contains('active'))render()}});setInterval(()=>{if(date()!==K.lastDate){advance();if(el('kingdoms')?.classList.contains('active'))render()}},60000)}
+function init(){migrateKingdomGrowth();let c=el('kCanvas');if(!c)return;c.addEventListener('click',e=>{let b=c.getBoundingClientRect(),x=Math.min(99,Math.max(0,Math.floor((e.clientX-b.left)/b.width*100))),y=Math.min(99,Math.max(0,Math.floor((e.clientY-b.top)/b.height*100))),i=K.tiles[pos(x,y)];if(i>=0){UI.selected=i;render()}});advance();render();document.addEventListener('visibilitychange',()=>{if(!document.hidden){advance();if(el('kingdoms')?.classList.contains('active'))render()}});setInterval(()=>{if(date()!==K.lastDate){advance();if(el('kingdoms')?.classList.contains('active'))render()}},60000)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script></body></html>
