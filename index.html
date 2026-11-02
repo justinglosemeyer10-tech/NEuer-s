@@ -580,8 +580,28 @@ function soldierTrainingBonus(level){
  return Math.floor((Math.sqrt(1+8*n/10)-1)/2);
 }
 function train(i){let r=K.realms[i];if(r.influence<15)return false;r.influence-=15;r.training++;event("train",i,r.name+" trainiert seine Armee (Training "+r.training+").");r.stats=r.stats.map(v=>Number(v)+rand(0,2));return true}
-function build(i){let r=K.realms[i],land=owned(i).filter(p=>K.buildings[p]<0);if(!land.length)return false;let affordable=TYPES.map((t,j)=>({j,cost:t[2]})).filter(t=>t.cost<=r.influence);if(!affordable.length)return false;let type=affordable[rand(0,affordable.length-1)];let p=land[rand(0,land.length-1)];K.buildings[p]=type.j;r.influence-=type.cost;event("build",i,r.name+" errichtet "+TYPES[type.j][1]+" "+TYPES[type.j][0]+".");return true}
-function focusAction(i){let r=K.realms[i],choice=Math.random()<.65?r.focus:FOCUS[rand(0,3)];if(choice==='Expansion')return expand(i);if(choice==='Militär')return Math.random()<.55?recruit(i):train(i);if(choice==='Wirtschaft')return build(i);return build(i)}
+function build(i){
+ let r=K.realms[i],land=owned(i).filter(p=>K.buildings[p]<0);
+ if(land.length){
+  let affordable=TYPES.map((t,j)=>({j,cost:t[2]})).filter(t=>t.cost<=r.influence);
+  if(!affordable.length)return false;
+  let type=affordable[rand(0,affordable.length-1)],p=land[rand(0,land.length-1)];
+  K.buildings[p]=type.j;r.influence-=type.cost;
+  event("build",i,r.name+" errichtet "+TYPES[type.j][1]+" "+TYPES[type.j][0]+".");
+  return true;
+ }
+ // Sind alle Felder bebaut, koennen bestehende Hoefe, Farmen und Minen zu Handel aufgewertet werden.
+ const trade=3,upgradeCost=35;
+ let candidates=owned(i).filter(p=>K.buildings[p]>=0&&K.buildings[p]<trade);
+ if(candidates.length&&r.influence>=upgradeCost){
+  let p=candidates[rand(0,candidates.length-1)],previous=K.buildings[p];
+  K.buildings[p]=trade;r.influence-=upgradeCost;
+  event("build",i,r.name+" wertet "+TYPES[previous][1]+" "+TYPES[previous][0]+" zu "+TYPES[trade][1]+" "+TYPES[trade][0]+" auf (35 Einfluss).");
+  return true;
+ }
+ return false;
+}
+function focusAction(i){let r=K.realms[i],choice=Math.random()<.65?r.focus:FOCUS[rand(0,3)];if(choice==='Expansion')return expand(i);if(choice==='Militär')return Math.random()<.55?recruit(i):train(i);if(choice==='Wirtschaft')return build(i)||expand(i)||train(i);return build(i)||expand(i)||train(i)}
 function borderEnemies(i){let map=new Map();for(let p=0;p<10000;p++)if(K.tiles[p]===i)for(let q of adj(p)){let other=K.tiles[q];if(other>=0&&other!==i){if(!map.has(other))map.set(other,[]);map.get(other).push([p,q])}}return map}
 function connectedAfterLoss(realm,removed){let list=owned(realm).filter(p=>!removed.has(p));if(!list.length)return false;let found=new Set([list[0]]),queue=[list[0]];for(let k=0;k<queue.length;k++)for(let q of adj(queue[k]))if(K.tiles[q]===realm&&!removed.has(q)&&!found.has(q)){found.add(q);queue.push(q)}return found.size===list.length}
 function battle(a,b){let A=K.realms[a],B=K.realms[b],border=borderEnemies(a).get(b)||[];if(!border.length)return;let nA=Math.min(A.soldiers,rand(1,Math.max(1,Math.ceil(A.soldiers*.6)))),nB=Math.min(B.soldiers,rand(1,Math.max(1,Math.ceil(B.soldiers*.6))));let x=nA,y=nB,rounds=[];for(let k=0;k<12&&x>0&&y>0;k++){let dA=rand(1,10),dB=rand(1,10),bonusA=Math.min(2,Math.max(0,Math.floor(x/y)-1)),bonusB=Math.min(2,Math.max(0,Math.floor(y/x)-1));let scoreA=dA+bonusA,scoreB=dB+bonusB;let la=0,lb=0;if(scoreA>scoreB){lb=Math.min(y,rand(1,3));la=Math.min(x,rand(0,2))}else if(scoreB>scoreA){la=Math.min(x,rand(1,3));lb=Math.min(y,rand(0,2))}else{la=Math.min(x,rand(1,2));lb=Math.min(y,rand(1,2))}x-=la;y-=lb;rounds.push({dA,dB,bonusA,bonusB,la,lb})}let won=x>y,lossA=nA-x,lossB=nB-y;A.soldiers=Math.max(1,A.soldiers-lossA);B.soldiers=Math.max(1,B.soldiers-lossB);let taken=[];if(won){let possible=[...new Set(border.map(pair=>pair[1]))],max=rand(1,5);for(let k=0;k<max&&possible.length;k++){let options=possible.filter(p=>!taken.length||adj(p).some(q=>taken.includes(q)));if(!options.length)break;let p=options[rand(0,options.length-1)],removed=new Set([...taken,p]);if(connectedAfterLoss(b,removed)){taken.push(p);possible=possible.filter(q=>q!==p)}else possible=possible.filter(q=>q!==p)}for(let p of taken){K.tiles[p]=a;K.buildings[p]=-1}}let record={id:K.days+'-'+K.battles.length,day:K.days,a,b,nA,nB,lossA,lossB,won,taken,rounds};K.battles.unshift(record);K.battles.length=Math.min(100,K.battles.length);log('⚔️ '+A.name+' gegen '+B.name+': '+(won?'Angreifer siegt':'Verteidiger hält')+' · '+taken.length+' Felder · Verluste '+lossA+'/'+lossB);event('battle',a,A.name+' kämpft gegen '+B.name+': '+(won?'Angreifer siegt':'Verteidiger hält')+', '+taken.length+' Felder, Verluste '+lossA+'/'+lossB+'.');return record}
