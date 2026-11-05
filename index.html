@@ -988,7 +988,7 @@ function blocked(){return(S.events||[]).some(e=>e.type==='combat'&&e.revealed&&!
 function panel(){const x=target?.x??S.map.x,y=target?.y??S.map.y,t=terrain(x,y),city=MAP_CITIES[x+','+y],here=x===S.map.x&&y===S.map.y;
  const selectedEvent=eventAt(x,y),knownEvent=selectedEvent&&(selectedEvent.revealed||!selectedEvent.hidden),eventLabel=knownEvent?({merchant:'Reisender Händler',discovery:'Fund am Wegesrand',combat:'Monsterbegegnung'}[selectedEvent.type]||'Begegnung'):'';
  info.innerHTML='<div class="small">'+(here?'DEIN STANDORT':'REISEZIEL')+' · '+x+' / '+y+'</div><h3>'+(city?city.name:terrainName(t))+'</h3>'+(!here&&eventLabel?'<div class="small">'+eventLabel+' · Reise dorthin, um mehr zu erfahren.</div>':'')+'<div class="small">Gefahr '+dangerAt(x,y)+' / 10</div><div class="small">'+(notice|| (here?'Wähle ein Ziel auf der Karte oder einen Ort aus der Liste.':route?route.steps.length+' Reiseschritte · '+route.cost+' Ausdauer · verfügbar '+Math.floor(S.map.stamina):'Kein passierbarer Weg'+(!S.map.boat?' · Wasser benötigt ein Boot.':'.')))+'</div>'+
- (!here&&route?'<div class="atlas-route-row"><button class="btn primary" id="atlasTravel" '+(running||!route.steps.length||S.map.stamina<route.cost||blocked()?'disabled':'')+'>'+(running?'Unterwegs …':'Hierhin reisen')+'</button><button class="btn" id="atlasCancel">'+(running?'Reise stoppen':'Ziel aufheben')+'</button></div>':'')+eventInfo(eventAt(S.map.x,S.map.y));
+ (!here&&route?'<div class="atlas-route-row"><button class="btn primary" id="atlasTravel" '+(running||!route.steps.length||S.map.stamina<route.cost||blocked()?'disabled':'')+'>'+(running?'Unterwegs …':'Hierhin reisen')+'</button><button class="btn" id="atlasCancel">'+(running?'Reise stoppen':'Ziel aufheben')+'</button></div>':'')+(typeof window.encounterOverlaySummary==='function'?window.encounterOverlaySummary():eventInfo(eventAt(S.map.x,S.map.y)));
  document.getElementById('atlasTravel')?.addEventListener('click',startTravel);document.getElementById('atlasCancel')?.addEventListener('click',()=>{stop();target=null;route=null;notice='';panel();schedule()});
 }
 function select(x,y){stop();target={x,y};notice='';route=findRoute(x,y);panel();schedule()}
@@ -1067,6 +1067,53 @@ const originalRender=render;render=function(){originalRender();renderBooks()};
 // Once for existing saves: a nearby merchant and a discovery make the new content discoverable.
 if(!S.travelEncountersVersion){const p=nearbySpot(true)||nearbySpot();if(p)S.events.push(createTravelEvent(p,'merchant'));const q=nearbySpot();if(q)S.events.push(createTravelEvent(q,'discovery'));S.travelEncountersVersion=1;save()}
 window.travelEncounterDebug={createTravelEvent,nearbySpot,promptFor};renderBooks();renderMap();
+})();
+
+</script><script>
+/* Keep encounters in the scene: one accessible modal over the world map. */
+(()=>{
+'use strict';
+const map=document.getElementById('map');
+const dialog=document.createElement('dialog');dialog.id='encounterOverlay';dialog.setAttribute('aria-labelledby','encounterOverlayTitle');
+dialog.innerHTML='<div class="encounter-heading"><div><div class="small" id="encounterOverlayKind"></div><h2 id="encounterOverlayTitle">Begegnung</h2></div><button class="btn" id="encounterOverlayClose" autofocus aria-label="Begegnungsfenster schließen">✕</button></div><div id="encounterOverlayBody"></div><div id="encounterOverlayActions"></div><div class="encounter-footer"><span class="small">Deine Reise pausiert hier.</span><button class="btn" id="encounterOverlayMap">Zur Karte</button></div>';
+document.body.append(dialog);
+const body=document.getElementById('encounterOverlayBody'),heading=document.getElementById('encounterOverlayTitle'),kind=document.getElementById('encounterOverlayKind');
+const style=document.createElement('style');style.textContent=`
+#encounterOverlay{width:min(94vw,660px);max-height:90vh;max-height:90dvh;padding:0;overflow:hidden;border:1px solid #a1ad7977;border-radius:20px;background:linear-gradient(145deg,#20332b,#101d1d);color:#f0ebd8;box-shadow:0 20px 90px #000b}
+#encounterOverlay[open]{display:flex;flex-direction:column;animation:encounter-in .18s ease-out}
+#encounterOverlay::backdrop{background:#06100cd1;backdrop-filter:blur(3px)}
+#encounterOverlay .encounter-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid #b6c49130;flex:none}
+#encounterOverlay h2{font:600 25px Georgia,serif;margin:4px 0 0;color:#f0e4b7}
+#encounterOverlayClose{min-width:42px;min-height:42px;font-size:18px}
+#encounterOverlayBody{overflow:auto;overscroll-behavior:contain;min-height:0;padding:14px 18px;-webkit-overflow-scrolling:touch}
+#encounterOverlayBody>.eventbox,#encounterOverlayBody>.monsterbox{margin:0;border:0;padding:0;background:transparent}
+#encounterOverlay .monsterstats{grid-template-columns:repeat(3,minmax(0,1fr))}
+#encounterOverlay .stat{padding:9px;background:#ffffff09;border:1px solid #ffffff0c}
+#encounterOverlayActions{padding:10px 18px;border-top:1px solid #b6c49130;flex:none}#encounterOverlayActions:empty{display:none}#encounterOverlayActions .row{margin:0!important}#encounterOverlayActions button{flex:1}#encounterOverlay .encounter-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid #b6c49130;flex:none;background:#111f1bbb}
+#encounterOverlay .btn{min-height:42px}#encounterOverlay .primary{background:#d5dfa6;color:#1b2b20}
+#map .encounter-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #ffffff20;padding-top:12px;margin-top:12px}
+@keyframes encounter-in{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#encounterOverlay[open]{animation:none}}
+@media(max-width:420px){#encounterOverlay h2{font-size:22px}#encounterOverlayBody{padding:12px}#encounterOverlay .monsterstats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+`;document.head.append(style);
+let visit=null,lastHTML='',locked=false,previousOverflow='';
+function local(){const e=eventAt(S.map.x,S.map.y);return e?.revealed?e:null}
+function unlock(){if(!locked)return;document.body.style.overflow=previousOverflow;locked=false}
+function close(){if(dialog.open)dialog.close();unlock()}
+document.getElementById('encounterOverlayClose').onclick=close;document.getElementById('encounterOverlayMap').onclick=close;
+dialog.addEventListener('close',unlock);dialog.addEventListener('cancel',()=>{unlock()});
+function sync(force=false){const e=local();if(!map.classList.contains('active')||!e){close();if(!e)visit=null;return}
+ const key=e.id+':'+S.map.x+':'+S.map.y,html=eventInfo(e);
+ if(html!==lastHTML){const scroll=visit===key?body.scrollTop:0,active=document.activeElement,action=dialog.contains(active)?active.getAttribute('onclick'):null;body.innerHTML=html;lastHTML=html;body.scrollTop=scroll;const actions=document.getElementById('encounterOverlayActions');actions.replaceChildren();const fightActions=body.querySelector('.monsterbox > .row')||body.querySelector('.monsterbox > button');if(fightActions)actions.append(fightActions);if(action){const button=[...dialog.querySelectorAll('button')].find(b=>b.getAttribute('onclick')===action&&!b.disabled);(button||document.getElementById('encounterOverlayClose')).focus({preventScroll:true})}}
+
+ const names={combat:'Monsterbegegnung',merchant:'Reisender Händler',discovery:'Ein Fund am Weg',person:'Eine Begegnung',special:'Eine Entdeckung',find:'Ein Fund'};heading.textContent=names[e.type]||'Begegnung';kind.textContent='UNTERWEGS · '+S.map.x+' / '+S.map.y;
+ if(force||visit!==key){visit=key;window.atlasDebug?.stop();if(!dialog.open){previousOverflow=document.body.style.overflow;document.body.style.overflow='hidden';locked=true;dialog.showModal();document.getElementById('encounterOverlayClose').focus({preventScroll:true})}}
+}
+window.showCurrentEncounter=()=>sync(true);
+window.encounterOverlaySummary=function(){const e=local();if(!e)return'';const name=e.type==='combat'?(e.monster?.name||'Monsterbegegnung'):e.type==='merchant'?'Reisender Händler':e.type==='discovery'?'Entdeckung':'Begegnung';return '<div class="encounter-summary"><b>'+masteryEscape(name)+'</b><button class="btn" onclick="showCurrentEncounter()">Begegnung ansehen</button></div>'};
+const originalRenderMap=renderMap;renderMap=function(){originalRenderMap();sync()};
+new MutationObserver(()=>{if(!map.classList.contains('active'))close()}).observe(map,{attributes:true,attributeFilter:['class']});
+renderMap();
 })();
 
 </script></body></html>
