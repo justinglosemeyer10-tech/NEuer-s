@@ -149,7 +149,7 @@ if(x<=27&&y>=coast){let island=blob(x,y,10,64,6.8,4.8,1);let peninsula=(x>=20&&x
 // Erdmassiv: organischer Bergring; der südwestliche Pass bleibt frei.
 let dx=x-84,dy=y-66,dist=Math.sqrt(dx*dx+dy*dy),mountWob=1.5*Math.sin(x*.42)+1.2*Math.sin(y*.51);if(dist>=4.5&&dist<=13+mountWob&&x>=68&&y>=50){let pass=(y>=61&&y<=64&&x>=68&&x<=82);if(!pass&&!ROADS.has(k))return'mountain'}
 // Feuerreich: mehrere überlappende Lava-/Vulkanflächen statt Rechteck.
-if(blob(x,y,84,10,14,11,1)||blob(x,y,93,18,8,9,1)||blob(x,y,75,17,7,8,1)){if(((x*7+y*11)%13<8)||x>80)return'volcano'}
+if(blob(x,y,84,10,14,11,1)||blob(x,y,93,18,8,9,1)||blob(x,y,75,17,7,8,1)){return'volcano'}
 // Eisreich mit unregelmäßiger Südgrenze.
 let iceEdge=15+Math.round(3*Math.sin(x*.22)+2*Math.sin(x*.47));if(x>=28&&x<=70&&y<=iceEdge&&blob(x,y,50,5,25,16,1))return'snow';
 // Düsterwald klar westlich und nördlicher – nicht mehr als Sperre zum Wasserdorf.
@@ -201,11 +201,7 @@ if(blocking){
   return;
 }
 let steps=1,nx=S.map.x+dx,ny=S.map.y+dy;if(!canEnter(nx,ny)){mapInfo.innerHTML='<b>Nicht passierbar</b><div class="small">'+(terrain(nx,ny)==='water'?'Du brauchst ein Boot, um das Meer zu überqueren.':'Dort kannst du nicht weiter.')+'</div>';return}let cells=[[nx,ny]];if(terrain(nx,ny)==='snow'){let sx=nx+dx,sy=ny+dy;if(canEnter(sx,sy)&&terrain(sx,sy)==='snow'){cells.push([sx,sy]);steps=2}}let cost=cells.reduce((a,[x,y])=>a+(MAP_COST[terrain(x,y)]||2),0);if(S.map.stamina+1e-6<cost){mapInfo.innerHTML='<b>Zu wenig Reiseausdauer</b><div class="small">Benötigt: '+cost+' · Aktuell: '+S.map.stamina.toFixed(1)+'</div>';return}S.map.stamina-=cost;S.map.x=cells[cells.length-1][0];S.map.y=cells[cells.length-1][1];camX=S.map.x;camY=S.map.y;S.map.lastMove=steps===2?'Auf dem Eis ein Feld weitergerutscht.':'';revealEventHere();
-if(!eventAt(S.map.x,S.map.y)&&Math.random()<.08){
-  let mon=generateMonsterEncounter(S.map.x,S.map.y);
-  S.events.push({id:S.eventSeq++,x:S.map.x,y:S.map.y,type:'combat',hidden:false,revealed:true,persistent:false,text:'Monsterbegegnung: '+mon.name,monster:mon});
-  S.map.lastMove='Ein Monster ist aufgetaucht!';
-}
+if(typeof window.rollTravelEncounter==='function')window.rollTravelEncounter();
 save()}
 function viewDims(){let w=Math.min(13,MW),h=11;if(innerWidth<=390)w=9;else if(innerWidth<=520)w=11;return[w,h]}
 function quickMonsterHunt(){
@@ -866,6 +862,10 @@ const originalTerrain=terrain,oldCities=Object.entries(MAP_CITIES);
 const roads=new Set();cities.slice(1).forEach(c=>lineRoad(roads,[50,50],[c[1],c[2]]));
 // Project the existing biomes into the kingdom coordinate system.
 const biomes=Array.from({length:10000},(_,i)=>originalTerrain(i%100,Math.round(Math.floor(i/100)*74/99)));
+// Remove traces of the old road grid from the projected background. Roads are
+// drawn separately; reconstruct the terrain under old paths from nearby land.
+const projected=biomes.slice();for(let y=0;y<100;y++)for(let x=0;x<100;x++){if(projected[y*100+x]!=='road')continue;const counts={};for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>99||ny>99)continue;const t=projected[ny*100+nx];if(t!=='road')counts[t]=(counts[t]||0)+1/(1+Math.abs(dx)+Math.abs(dy))}biomes[y*100+x]=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'grass'}
+
 Object.keys(MAP_CITIES).forEach(k=>delete MAP_CITIES[k]);
 cities.forEach((c,i)=>MAP_CITIES[c[1]+','+c[2]]={name:c[0],kind:['Hauptstadt','Eis','Feuer','Donner','Erde','Wind','Wasser','Schatten','Licht'][i]});
 terrain=function(x,y){if(x<0||y<0||x>99||y>99)return'water';if(MAP_CITIES[x+','+y]||roads.has(x+','+y))return'road';return biomes[y*100+x]==='road'?'grass':biomes[y*100+x]||'grass'};
@@ -942,18 +942,24 @@ for(let y=0;y<200;y++)for(let x=0;x<200;x++){
 for(let y=0;y<100;y++)for(let x=0;x<100;x++){
  const t=ground(x+.5,y+.5),n=noise(x+513,y+87);if(allRoads.has(x+','+y)||MAP_CITIES[x+','+y])continue;
  if(t==='mountain'&&n>.48)mountain((x+.3+noise(x,y)*.5)*UNIT,(y+.7)*UNIT,39+n*35,true);
- if(t==='volcano'&&n>.93)mountain((x+.5)*UNIT,(y+.7)*UNIT,26+n*25,false,true);
+ if(t==='volcano'&&n>.97&&Math.hypot(x-85,y-15)>5)mountain((x+.5)*UNIT,(y+.7)*UNIT,23+noise(y+31,x+4)*26,false,true);
 }
+// Lava channels tie the volcanic fields together instead of scattering identical peaks.
+const lavaPaths=[[[85,15],[88,19],[87,24],[93,29]],[[85,15],[82,19],[78,21],[75,24]],[[85,15],[90,15],[94,19],[96,25]],[[85,15],[84,11],[81,7]]];
+for(const path of lavaPaths){const segments=[];for(let j=1;j<path.length;j++){const from=path[j-1],to=path[j],steps=Math.ceil(Math.hypot(to[0]-from[0],to[1]-from[1])*5);for(let i=0;i<steps;i++){const f=i/steps,g=(i+1)/steps,x=from[0]+(to[0]-from[0])*f+Math.sin(f*Math.PI*3+j)*.25,y=from[1]+(to[1]-from[1])*f,x2=from[0]+(to[0]-from[0])*g+Math.sin(g*Math.PI*3+j)*.25,y2=from[1]+(to[1]-from[1])*g;segments.push(ground(x,y)==='volcano'&&!allRoads.has(Math.floor(x)+','+Math.floor(y))?[x,y,x2,y2]:null)}}for(const [color,w]of [['#372f2e',13],['#9a4d35',8],['#dc8450',4],['#f3bc72',2]]){b.strokeStyle=color;b.lineWidth=w;b.lineJoin='round';b.beginPath();let connected=false;for(const seg of segments){if(!seg){connected=false;continue}const [x,y,x2,y2]=seg;if(!connected)b.moveTo(x*UNIT,y*UNIT);b.lineTo(x2*UNIT,y2*UNIT);connected=true}b.stroke()}}
+// One recognisable volcanic massif, with a caldera and lit fissures.
+{const x=85*UNIT,y=15*UNIT;b.save();b.translate(x,y);polygon([[-73,36],[-38,-5],[-25,-46],[-13,-54],[13,-54],[28,-36],[39,-2],[75,36],[28,49],[-25,45]],'#493e37');polygon([[-73,36],[-38,-5],[-25,-46],[-13,-54],[-19,-19],[-36,5],[-43,30],[-5,38]],'#8c7355');polygon([[13,-54],[28,-36],[39,-2],[75,36],[28,49],[11,23],[18,0],[5,-25]],'#5d4c3e');polygon([[-25,-46],[-13,-54],[13,-54],[26,-39],[8,-32],[-13,-35]],'#2e2c2a');polygon([[-17,-44],[-9,-49],[10,-49],[17,-42],[5,-37],[-8,-39]],'#db8050');b.fillStyle='#f1bd74';b.fillRect(-6,-45,12,3);polygon([[0,-35],[7,-25],[3,-8],[11,1],[8,19],[18,34],[13,36],[3,19],[5,2],[-2,-7],[3,-24],[-5,-35]],'#de8850');b.fillStyle='#f2bc70';b.fillRect(1,-21,2,12);b.fillRect(6,6,2,10);b.restore()}
+
 // Small settlements are part of the landscape and remain crisp when zooming in.
 function house(x,y,roof){b.fillStyle='#293f3633';b.fillRect(x-5,y+2,20,6);b.fillStyle='#d5c8a1';b.fillRect(x-6,y-7,13,13);b.fillStyle='#a89976';b.fillRect(x+2,y-7,5,13);polygon([[x-9,y-7],[x,y-15],[x+10,y-7]],roof);b.fillStyle='#4e6551';b.fillRect(x-1,y,3,6);b.fillRect(x-4,y-5,2,3)}
 cities.forEach((c,i)=>{const px=(c[1]+.5)*UNIT,py=(c[2]+.5)*UNIT;b.fillStyle='#c6bc8e';b.beginPath();b.ellipse(px,py+3,i?23:34,i?13:20,0,0,Math.PI*2);b.fill();house(px-16,py+9,i===1?'#71969b':i===2?'#a76d50':'#8b785c');house(px+17,py-1,i===7?'#6d657b':'#92765b');if(i===0){house(px-20,py-16,'#788a70');house(px+25,py+17,'#92765b')}b.fillStyle='#756e55';b.fillRect(px-9,py-19,18,26);b.fillStyle='#ded6b5';b.fillRect(px-9,py-19,13,23);b.fillStyle='#bec1a0';b.fillRect(px-12,py-24,7,26);b.fillRect(px+5,py-24,7,26);b.fillStyle=colors[i];b.fillRect(px-12,py-28,7,6);b.fillRect(px+5,py-28,7,6);b.fillRect(px-4,py-22,8,6);b.fillStyle='#3e5650';b.fillRect(px-2,py-4,5,10)});
 
 function readKingdom(){try{const raw=localStorage.getItem('RPG_KINGDOMS_V2');if(raw!==kingdomRaw){kingdomRaw=raw;const k=JSON.parse(raw||'null');kingdom=k?.tiles?.length===10000?k:null}}catch{kingdom=null}}
 function fit(){zoom=Math.min(width,height)/100;cx=cy=50;fitted=true;schedule()}
-function clampCamera(){cx=Math.max(0,Math.min(100,cx));cy=Math.max(0,Math.min(100,cy))}
+function clampCamera(){const hx=width/(2*zoom),hy=height/(2*zoom);cx=hx>=50?50:Math.max(hx,Math.min(100-hx,cx));cy=hy>=50?50:Math.max(hy,Math.min(100-hy,cy))}
 function schedule(){if(!raf)raf=requestAnimationFrame(draw)}
 function point(x,y){return[(x-cx)*zoom+width/2,(y-cy)*zoom+height/2]}
-function draw(){raf=0;if(!section.classList.contains('active'))return;ctx.imageSmoothingEnabled=false;ctx.fillStyle='#152b2d';ctx.fillRect(0,0,width,height);const [ox,oy]=point(0,0);ctx.drawImage(base,ox,oy,100*zoom,100*zoom);
+function draw(){raf=0;if(!section.classList.contains('active'))return;clampCamera();ctx.imageSmoothingEnabled=false;ctx.fillStyle='#152b2d';ctx.fillRect(0,0,width,height);const [ox,oy]=point(0,0);ctx.drawImage(base,ox,oy,100*zoom,100*zoom);
  if(borders&&kingdom){ctx.lineWidth=1.5;for(let y=0;y<100;y++)for(let x=0;x<100;x++){const i=y*100+x,k=kingdom.tiles[i];if(k<0||k>8)continue;const [px,py]=point(x,y);ctx.fillStyle=colors[k]+'28';ctx.fillRect(px,py,zoom,zoom);ctx.strokeStyle=colors[k];ctx.beginPath();if(x===0||kingdom.tiles[i-1]!==k){ctx.moveTo(px,py);ctx.lineTo(px,py+zoom)}if(y===0||kingdom.tiles[i-100]!==k){ctx.moveTo(px,py);ctx.lineTo(px+zoom,py)}if(x===99||kingdom.tiles[i+1]!==k){ctx.moveTo(px+zoom,py);ctx.lineTo(px+zoom,py+zoom)}if(y===99||kingdom.tiles[i+100]!==k){ctx.moveTo(px,py+zoom);ctx.lineTo(px+zoom,py+zoom)}ctx.stroke()}}
  if(route?.steps.length){ctx.strokeStyle='#f4e0a1';ctx.lineWidth=2.5;ctx.setLineDash([5,4]);ctx.beginPath();let p=point(S.map.x+.5,S.map.y+.5);ctx.moveTo(...p);route.steps.forEach(s=>ctx.lineTo(...point(s.x+.5,s.y+.5)));ctx.stroke();ctx.setLineDash([])}
  // Region names sit on the landscape, while city names remain readable at every scale.
@@ -963,7 +969,7 @@ function draw(){raf=0;if(!section.classList.contains('active'))return;ctx.imageS
  {ctx.font='600 '+(zoom<5?'9':'11')+'px system-ui';ctx.textAlign='center';const tw=ctx.measureText(c[0]).width,labelY=y+Math.max(12,zoom*.6);ctx.fillStyle='#132c29e8';ctx.fillRect(x-tw/2-7,labelY,tw+14,19);ctx.fillStyle=colors[i]+'99';ctx.fillRect(x-tw/2-7,labelY,tw+14,1);ctx.fillStyle='#f0e8c9';ctx.fillText(c[0],x,labelY+13)}});
  // A quiet compass rose adds orientation without covering destinations.
  ctx.save();ctx.translate(width-31,35);ctx.strokeStyle='#e3d9ac99';ctx.fillStyle='#e3d9ac';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,-12);ctx.lineTo(4,4);ctx.lineTo(0,1);ctx.lineTo(-4,4);ctx.closePath();ctx.stroke();ctx.fillStyle='#bdc3a7';ctx.font='10px Georgia';ctx.textAlign='center';ctx.fillText('N',0,-17);ctx.restore();
- (S.events||[]).filter(e=>e.revealed||!e.hidden).forEach(e=>{const [x,y]=point(e.x+.5,e.y+.5);ctx.fillStyle=e.revealed?'#c8d89a':'#f1cc79';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#192923';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillText(e.revealed?'◆':'?',x,y+3)});
+ (S.events||[]).filter(e=>e.revealed||!e.hidden).forEach(e=>{const [x,y]=point(e.x+.5,e.y+.5),type=e.type;ctx.fillStyle=type==='merchant'?'#a9d4c2':type==='combat'?'#dfaa8f':'#edd292';ctx.strokeStyle='#213c36';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.stroke();ctx.fill();ctx.fillStyle='#192923';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText(type==='merchant'?'¤':type==='discovery'?'✦':type==='combat'?'!':e.revealed?'◆':'?',x,y+4)});
  if(target){const [x,y]=point(target.x+.5,target.y+.5);ctx.strokeStyle='#f2dea0';ctx.lineWidth=2;ctx.strokeRect(x-8,y-8,16,16)}
  const [px,py]=point(S.map.x+.5,S.map.y+.5);ctx.strokeStyle='#122923';ctx.lineWidth=4;ctx.fillStyle='#f7f0cc';ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.stroke();ctx.fill();ctx.strokeStyle='#f7f0cc88';ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,11,0,Math.PI*2);ctx.stroke();
  document.getElementById('atlasCaption').textContent='◎ Du · '+Math.round(zoom/(Math.min(width,height)/100)*100)+' % · '+(borders?(kingdom?'Aktuelle Reichsgrenzen':'Noch keine Reichsgrenzen gespeichert'):'Grenzen ausgeblendet');
@@ -980,7 +986,8 @@ function findRoute(tx,ty){if(!canEnter(tx,ty))return null;const start=S.map.y*10
 }
 function blocked(){return(S.events||[]).some(e=>e.type==='combat'&&e.revealed&&!e.monster?.defeated&&e.x===S.map.x&&e.y===S.map.y)}
 function panel(){const x=target?.x??S.map.x,y=target?.y??S.map.y,t=terrain(x,y),city=MAP_CITIES[x+','+y],here=x===S.map.x&&y===S.map.y;
- info.innerHTML='<div class="small">'+(here?'DEIN STANDORT':'REISEZIEL')+' · '+x+' / '+y+'</div><h3>'+(city?city.name:terrainName(t))+'</h3><div class="small">'+(notice|| (here?'Wähle ein Ziel auf der Karte oder einen Ort aus der Liste.':route?route.steps.length+' Reiseschritte · '+route.cost+' Ausdauer · verfügbar '+Math.floor(S.map.stamina):'Kein passierbarer Weg'+(!S.map.boat?' · Wasser benötigt ein Boot.':'.')))+'</div>'+
+ const selectedEvent=eventAt(x,y),knownEvent=selectedEvent&&(selectedEvent.revealed||!selectedEvent.hidden),eventLabel=knownEvent?({merchant:'Reisender Händler',discovery:'Fund am Wegesrand',combat:'Monsterbegegnung'}[selectedEvent.type]||'Begegnung'):'';
+ info.innerHTML='<div class="small">'+(here?'DEIN STANDORT':'REISEZIEL')+' · '+x+' / '+y+'</div><h3>'+(city?city.name:terrainName(t))+'</h3>'+(!here&&eventLabel?'<div class="small">'+eventLabel+' · Reise dorthin, um mehr zu erfahren.</div>':'')+'<div class="small">Gefahr '+dangerAt(x,y)+' / 10</div><div class="small">'+(notice|| (here?'Wähle ein Ziel auf der Karte oder einen Ort aus der Liste.':route?route.steps.length+' Reiseschritte · '+route.cost+' Ausdauer · verfügbar '+Math.floor(S.map.stamina):'Kein passierbarer Weg'+(!S.map.boat?' · Wasser benötigt ein Boot.':'.')))+'</div>'+
  (!here&&route?'<div class="atlas-route-row"><button class="btn primary" id="atlasTravel" '+(running||!route.steps.length||S.map.stamina<route.cost||blocked()?'disabled':'')+'>'+(running?'Unterwegs …':'Hierhin reisen')+'</button><button class="btn" id="atlasCancel">'+(running?'Reise stoppen':'Ziel aufheben')+'</button></div>':'')+eventInfo(eventAt(S.map.x,S.map.y));
  document.getElementById('atlasTravel')?.addEventListener('click',startTravel);document.getElementById('atlasCancel')?.addEventListener('click',()=>{stop();target=null;route=null;notice='';panel();schedule()});
 }
@@ -1001,9 +1008,65 @@ canvas.addEventListener('keydown',e=>{const ds={ArrowUp:[0,-1],ArrowDown:[0,1],A
 document.getElementById('atlasFit').onclick=fit;document.getElementById('atlasFollow').onclick=()=>{cx=S.map.x;cy=S.map.y;zoom=Math.max(zoom,22);schedule()};document.getElementById('atlasPlus').onclick=()=>zoomAt(1.4);document.getElementById('atlasMinus').onclick=()=>zoomAt(1/1.4);
 document.getElementById('atlasBorders').onclick=e=>{borders=!borders;e.currentTarget.textContent='Grenzen '+(borders?'an':'aus');e.currentTarget.setAttribute('aria-pressed',String(borders));schedule()};
 const destinations=document.getElementById('atlasDestinations');cities.forEach((c,i)=>{const button=document.createElement('button');button.textContent=c[0];button.style.borderColor=colors[i]+'88';button.onclick=()=>{select(c[1],c[2]);cx=c[1];cy=c[2];schedule()};destinations.append(button)});
-const legend=document.createElement('div');legend.className='atlas-legend';cities.forEach((c,i)=>{const span=document.createElement('span'),dot=document.createElement('i');dot.style.background=colors[i];span.append(dot,document.createTextNode(c[0]));legend.append(span)});card.querySelector('.atlas-bottom').append(legend);
+const legend=document.createElement('div');legend.className='atlas-legend';cities.forEach((c,i)=>{const span=document.createElement('span'),dot=document.createElement('i');dot.style.background=colors[i];span.append(dot,document.createTextNode(c[0]));legend.append(span)});card.querySelector('.atlas-bottom').append(legend);const encountersLegend=document.createElement('div');encountersLegend.className='small';encountersLegend.textContent='¤ Reisender Händler · ✦ Fund · ! Monster';card.querySelector('.atlas-bottom').append(encountersLegend);
 new ResizeObserver(resize).observe(wrap);document.addEventListener('visibilitychange',()=>{if(document.hidden&&running){stop();notice='Reise pausiert.';panel()}});new MutationObserver(()=>{if(!section.classList.contains('active')&&running){stop();notice='Reise pausiert.';panel()}}).observe(section,{attributes:true,attributeFilter:['class']});
 window.atlasDebug={findRoute,select,fit,stop,getState:()=>({cx,cy,zoom,target,route,running})};renderMap();
+})();
+
+</script><script>
+/* Persistent travel encounters and story rewards. */
+(()=>{
+'use strict';
+const elements=['Feuer','Wasser','Eis','Donner','Wind','Erde','Licht','Schatten'];
+const choose=a=>a[Math.floor(Math.random()*a.length)],esc=masteryEscape;
+S.travelBooks=Array.isArray(S.travelBooks)?S.travelBooks:[];
+S.travelId=(S.items||[]).reduce((max,item)=>Math.max(max,Number(item.id)||0),Math.max(Number(S.travelId)||0,Date.now()));
+function uid(){return ++S.travelId}
+function book(kind,element){return{id:uid(),kind,element:kind==='grimoire'?(element||choose(elements)):null,opened:false,completed:false}}
+function title(b){return b.kind==='grimoire'?b.element+'-Grimoire':'Fähigkeitenbuch'}
+function promptFor(b){return b.kind==='grimoire'?'Ich habe in meiner Fantasy-RPG-Geschichte ein '+b.element+'-Grimoire gefunden. Erfinde einen zufälligen, passenden '+b.element+'-Zauber. Gib ihm einen Namen, eine interessante Wirkung, Grenzen und einen Vorschlag für Manakosten. Nicht jeder Fund muss mächtig sein. Ich entscheide selbst, ob ich ihn in mein Spiel übernehme.':'Ich habe in meiner Fantasy-RPG-Geschichte ein Fähigkeitenbuch gefunden und erhalte eine neue Fähigkeit. Erfinde eine zufällige, interessante aktive Fähigkeit oder ein passives Talent mit Namen, Wirkung und Grenzen. Nicht jeder Fund muss mächtig sein. Ich entscheide selbst, welche Spielwerte und Kosten dazu passen.'}
+function makeMerchant(pos){
+ const names=['Mira die Wegkundige','Orin mit dem Wanderkarren','Sela die Sammlerin','Tarek der Fernhändler'];
+ const stock=[];for(let i=0;i<2+Math.floor(Math.random()*2);i++){const rarity=shopRarity(),item=shopItem(rarity),types=W.filter(w=>w!=='Unbewaffnet');item.slot='Waffe';item.wt=choose(types);item.name='Reisenden-'+item.wt;item.element='Neutral';item.id=uid();const discount=20+Math.floor(Math.random()*21),referencePrice=item.price;stock.push({id:uid(),kind:'weapon',item,referencePrice,discount,price:Math.max(1,Math.floor(referencePrice*(1-discount/100))),sold:false})}
+ for(let i=0;i<1+Math.floor(Math.random()*2);i++){const reward=book(Math.random()<.7?'grimoire':'ability');stock.push({id:uid(),kind:'book',book:reward,price:reward.kind==='grimoire'?250+Math.floor(Math.random()*301):450+Math.floor(Math.random()*451),sold:false})}
+ return{id:S.eventSeq++,x:pos.x,y:pos.y,type:'merchant',hidden:false,revealed:false,persistent:false,text:'Ein reisender Händler rastet am Weg.',merchant:{name:choose(names),stock}};
+}
+function makeDiscovery(pos){const r=Math.random(),reward=r<.42?{kind:'book',book:book('grimoire')}:r<.72?{kind:'book',book:book('ability')}:r<.9?{kind:'gold',amount:40+Math.floor(Math.random()*111)}:{kind:'material',name:'Kristall aus einer vergessenen Truhe',rarity:'Selten',element:choose(elements)};return{id:S.eventSeq++,x:pos.x,y:pos.y,type:'discovery',hidden:Math.random()<.2,revealed:false,persistent:false,text:choose(['Eine verwitterte Truhe liegt zwischen den Wurzeln.','In einem verlassenen Lager wartet ein Fund.','Du entdeckst eine Nische in einer alten Ruine.']),reward,claimed:false}}
+function createTravelEvent(pos,forced){let t=terrain(pos.x,pos.y),roll=Math.random(),type=forced||(t==='road'?(roll<.4?'merchant':roll<.7?'discovery':roll<.9?'combat':'person'):(roll<.12?'merchant':roll<.47?'discovery':roll<.92?'combat':'person'));
+ if(type==='merchant')return makeMerchant(pos);if(type==='discovery')return makeDiscovery(pos);
+ if(type==='combat'){const m=generateMonsterEncounter(pos.x,pos.y);return{id:S.eventSeq++,x:pos.x,y:pos.y,type:'combat',hidden:false,revealed:false,persistent:false,text:'Monsterbegegnung: '+m.name,monster:m}}
+ return{id:S.eventSeq++,x:pos.x,y:pos.y,type:'person',hidden:false,revealed:false,persistent:false,text:choose(['Eine erschöpfte Reisende bittet dich um Hilfe. Was ist ihr zugestoßen?','Ein Fremder bietet dir eine Wette an. Du entscheidest, worum es geht.','Ein alter Wanderer kennt ein Gerücht über einen verborgenen Ort.'])};
+}
+// Put daily encounters within a useful travel distance, instead of anywhere in 10,000 cells.
+function nearbySpot(road=false){const candidates=[];for(let y=Math.max(0,S.map.y-16);y<=Math.min(99,S.map.y+16);y++)for(let x=Math.max(0,S.map.x-16);x<=Math.min(99,S.map.x+16);x++){const d=Math.abs(x-S.map.x)+Math.abs(y-S.map.y);if(d<4||d>16||MAP_CITIES[x+','+y]||eventAt(x,y)||!canEnter(x,y)||(road&&terrain(x,y)!=='road'))continue;const route=window.atlasDebug?.findRoute(x,y);if(route&&route.steps.length&&route.steps.length<=20)candidates.push({x,y})}return candidates.length?choose(candidates):null}
+const originalMakeEvent=makeEvent;
+makeEvent=function(){const old=originalMakeEvent();if(['person','find'].includes(old.type)&&Math.random()<.7)return createTravelEvent(old,old.type==='find'?'discovery':'merchant');return old};
+const originalRefresh=refreshDailyEvents;
+refreshDailyEvents=function(){originalRefresh();const p=nearbySpot(true)||nearbySpot();if(p)S.events.push(createTravelEvent(p,'merchant'));const q=nearbySpot();if(q)S.events.push(createTravelEvent(q,'discovery'))};
+// Called only after a successful movement; a short cooldown prevents constant interruptions.
+window.rollTravelEncounter=function(){S.map.quietSteps=(S.map.quietSteps||0)+1;if(eventAt(S.map.x,S.map.y)){S.map.quietSteps=0;return}if(MAP_CITIES[S.map.x+','+S.map.y]||S.map.quietSteps<5)return;const chance=terrain(S.map.x,S.map.y)==='road'?.045:.065;if(Math.random()>=chance)return;const e=createTravelEvent({x:S.map.x,y:S.map.y});e.hidden=false;e.revealed=true;S.events.push(e);S.map.quietSteps=0;S.map.lastMove=e.type==='merchant'?'Du triffst einen reisenden Händler.':e.type==='discovery'?'Ein Fund am Wegesrand!':e.type==='combat'?'Ein Monster versperrt den Weg.':'Eine Begegnung auf deiner Reise.'};
+function localEvent(id,type){return(S.events||[]).find(e=>e.id===id&&e.type===type&&e.revealed&&e.x===S.map.x&&e.y===S.map.y)}
+window.buyTravelOffer=function(eventId,offerId){const e=localEvent(eventId,'merchant'),offer=e?.merchant?.stock.find(o=>o.id===offerId);if(!offer||offer.sold)return;if((S.gold||0)<offer.price){alert('Dafür fehlen dir '+Math.ceil(offer.price-(S.gold||0))+' Gold.');return}S.gold-=offer.price;offer.sold=true;if(offer.kind==='weapon'){const item=JSON.parse(JSON.stringify(offer.item));delete item.price;item.id=uid();S.items.push(item)}else{const b=JSON.parse(JSON.stringify(offer.book));b.id=uid();b.source=e.merchant.name;b.acquiredAt=today();S.travelBooks.push(b)}save()};
+window.claimTravelDiscovery=function(id){const e=localEvent(id,'discovery');if(!e||e.claimed||!e.reward)return;e.claimed=true;const r=e.reward;if(r.kind==='book'){const b=JSON.parse(JSON.stringify(r.book));b.id=uid();b.source='Fund auf Reisen';b.acquiredAt=today();S.travelBooks.push(b)}else if(r.kind==='gold')S.gold=(S.gold||0)+r.amount;else if(r.kind==='material')addLootMaterial({name:r.name,rarity:r.rarity,type:'Entdeckung'},r.element);save()};
+const originalEventInfo=eventInfo;
+eventInfo=function(e){if(!e?.revealed)return'';
+ if(e.type==='merchant'&&e.merchant){return '<div class="eventbox"><div class="small">REISENDER HÄNDLER</div><h3>'+esc(e.merchant.name)+'</h3><div class="small">Waffen 20–40 % unter dem regulären Händlerpreis dieses Gegenstands. Das Angebot bleibt für diese Begegnung gleich.</div><b>Dein Gold: '+Math.floor(S.gold||0)+' 🪙</b>'+e.merchant.stock.map(o=>'<div class="travel-offer"><div><b>'+esc(o.kind==='weapon'?o.item.name:title(o.book))+'</b><div class="small">'+(o.kind==='weapon'?esc(o.item.rarity)+' · '+esc(itemTxt(o.item)):'Ein Buch für deine Geschichte · Inhalt mit ChatGPT entdecken')+'</div>'+(o.kind==='weapon'?'<div class="small"><s>'+o.referencePrice+' Gold</s> · −'+o.discount+' %</div>':'')+'</div><div><b>'+o.price+' 🪙</b><button class="btn primary" '+(o.sold||S.gold<o.price?'disabled':'')+' onclick="buyTravelOffer('+e.id+','+o.id+')">'+(o.sold?'Gekauft':'Kaufen')+'</button></div></div>').join('')+'<div class="row" style="margin-top:10px"><button class="btn" onclick="openTravelBooks()">Meine Bücher</button><button class="btn" onclick="removeEvent('+e.id+')">Weiterziehen</button></div></div>'}
+ if(e.type==='discovery'&&e.reward){const r=e.reward,label=r.kind==='book'?title(r.book):r.kind==='gold'?r.amount+' Gold':r.name;return '<div class="eventbox"><div class="small">ENTDECKUNG</div><p>'+esc(e.text)+'</p><h3>'+esc(label)+'</h3><div class="small">'+(e.claimed?'Bereits erhalten – dein Fund ist gespeichert.':r.kind==='book'?'Das Buch gehört dir, sobald du es mitnimmst. Seinen Inhalt entdeckst du mit ChatGPT.':'Nimm deinen Fund mit.')+'</div><div class="row" style="margin-top:10px"><button class="btn primary" '+(e.claimed?'disabled':'')+' onclick="claimTravelDiscovery('+e.id+')">'+(e.claimed?'Erhalten':'Mitnehmen')+'</button>'+(e.claimed&&r.kind==='book'?'<button class="btn" onclick="openTravelBooks()">Buch öffnen</button>':'')+'<button class="btn" onclick="removeEvent('+e.id+')">Weiterziehen</button></div></div>'}
+ return originalEventInfo(e);
+};
+// Books are story rewards, separate from forge materials and usable equipment.
+const library=document.createElement('div');library.id='travelLibrary';library.className='card';document.getElementById('inv').append(library);
+const css=document.createElement('style');css.textContent='.travel-offer{display:grid;grid-template-columns:1fr auto;gap:12px;padding:13px 0;border-bottom:1px solid #ffffff18}.travel-offer>div:last-child{display:grid;gap:7px;text-align:right}.travel-book{padding:14px 0;border-bottom:1px solid #ffffff18}.travel-book:last-child{border:0}.travel-book textarea{min-height:130px;margin:10px 0;font-size:13px}.travel-book h3{margin:3px 0 8px}.travel-book .btn{font-size:13px}#travelCopyStatus{min-height:20px;margin-top:8px}';document.head.append(css);
+function renderBooks(){library.innerHTML='<h3>📚 Bücher & Entdeckungen</h3><div class="small">Deine Funde auf Reisen. Gestalte Zauber und Fähigkeiten mit ChatGPT und trage sie anschließend in dein Grimoire oder deine Fähigkeiten ein.</div><div id="travelCopyStatus" class="small" role="status"></div>'+(S.travelBooks.length?S.travelBooks.map(b=>'<div class="travel-book"><div class="small">'+esc(b.source||'Fund auf Reisen')+' · '+(b.completed?'Umgesetzt':b.opened?'Geöffnet':'Ungeöffnet')+'</div><h3>'+esc(title(b))+'</h3>'+(b.opened?'<textarea readonly aria-label="Vorlage für ChatGPT">'+esc(promptFor(b))+'</textarea><div class="row"><button class="btn" onclick="copyTravelBook('+b.id+')">Für ChatGPT kopieren</button><button class="btn primary" onclick="writeTravelBook('+b.id+')">'+(b.kind==='grimoire'?'Zauber eintragen':'Fähigkeit eintragen')+'</button><button class="btn" onclick="completeTravelBook('+b.id+')">'+(b.completed?'Wieder öffnen':'Als umgesetzt markieren')+'</button></div>':'<button class="btn primary" onclick="openTravelBook('+b.id+')">Buch öffnen</button>')+'</div>').join(''):'<p class="small">Noch keine Bücher gefunden. Halte nach Truhen und reisenden Händlern Ausschau.</p>')}
+window.openTravelBooks=function(){openExtraPage('inv');renderBooks();library.scrollIntoView({behavior:'smooth',block:'start'})};
+window.openTravelBook=function(id){const b=S.travelBooks.find(x=>x.id===id);if(!b)return;b.opened=true;save()};
+window.copyTravelBook=async function(id){const b=S.travelBooks.find(x=>x.id===id);if(!b?.opened)return;try{await navigator.clipboard.writeText(promptFor(b));document.getElementById('travelCopyStatus').textContent='Vorlage kopiert – du kannst sie jetzt in ChatGPT einfügen.'}catch{document.getElementById('travelCopyStatus').textContent='Bitte den Text im Buch markieren und kopieren.'}};
+window.writeTravelBook=function(id){const b=S.travelBooks.find(x=>x.id===id);if(!b?.opened)return;if(b.kind==='grimoire'){openExtraPage('grimoire');document.getElementById('spellElement').value=b.element;document.getElementById('spellName').focus()}else{openExtraPage('abilities');clearAbilityEditor();document.getElementById('abilityName').focus()}};
+window.completeTravelBook=function(id){const b=S.travelBooks.find(x=>x.id===id);if(!b?.opened)return;b.completed=!b.completed;save()};
+const originalRender=render;render=function(){originalRender();renderBooks()};
+// Once for existing saves: a nearby merchant and a discovery make the new content discoverable.
+if(!S.travelEncountersVersion){const p=nearbySpot(true)||nearbySpot();if(p)S.events.push(createTravelEvent(p,'merchant'));const q=nearbySpot();if(q)S.events.push(createTravelEvent(q,'discovery'));S.travelEncountersVersion=1;save()}
+window.travelEncounterDebug={createTravelEvent,nearbySpot,promptFor};renderBooks();renderMap();
 })();
 
 </script></body></html>
