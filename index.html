@@ -1017,6 +1017,7 @@ window.atlasDebug={findRoute,select,fit,stop,getState:()=>({cx,cy,zoom,target,ro
 /* Persistent travel encounters and story rewards. */
 (()=>{
 'use strict';
+const GRIMOIRE_CHANCE=.01; // One percent per merchant or discovery.
 const elements=['Feuer','Wasser','Eis','Donner','Wind','Erde','Licht','Schatten'];
 const choose=a=>a[Math.floor(Math.random()*a.length)],esc=masteryEscape;
 S.travelBooks=Array.isArray(S.travelBooks)?S.travelBooks:[];
@@ -1028,10 +1029,11 @@ function promptFor(b){return b.kind==='grimoire'?'Ich habe in meiner Fantasy-RPG
 function makeMerchant(pos){
  const names=['Mira die Wegkundige','Orin mit dem Wanderkarren','Sela die Sammlerin','Tarek der Fernhändler'];
  const stock=[];for(let i=0;i<2+Math.floor(Math.random()*2);i++){const rarity=shopRarity(),item=shopItem(rarity),types=W.filter(w=>w!=='Unbewaffnet');item.slot='Waffe';item.wt=choose(types);item.name='Reisenden-'+item.wt;item.element='Neutral';item.id=uid();const discount=20+Math.floor(Math.random()*21),referencePrice=item.price;stock.push({id:uid(),kind:'weapon',item,referencePrice,discount,price:Math.max(1,Math.floor(referencePrice*(1-discount/100))),sold:false})}
- for(let i=0;i<1+Math.floor(Math.random()*2);i++){const reward=book(Math.random()<.7?'grimoire':'ability');stock.push({id:uid(),kind:'book',book:reward,price:reward.kind==='grimoire'?250+Math.floor(Math.random()*301):450+Math.floor(Math.random()*451),sold:false})}
- return{id:S.eventSeq++,x:pos.x,y:pos.y,type:'merchant',hidden:false,revealed:false,persistent:false,text:'Ein reisender Händler rastet am Weg.',merchant:{name:choose(names),stock}};
+ for(let i=0;i<1+Math.floor(Math.random()*2);i++){if(Math.random()>=.3)continue;const reward=book('ability');stock.push({id:uid(),kind:'book',book:reward,price:450+Math.floor(Math.random()*451),sold:false})}
+ if(Math.random()<GRIMOIRE_CHANCE){const reward=book('grimoire');stock.push({id:uid(),kind:'book',book:reward,price:250+Math.floor(Math.random()*301),sold:false})}
+ return{id:S.eventSeq++,x:pos.x,y:pos.y,type:'merchant',hidden:false,revealed:false,persistent:false,text:'Ein reisender Händler rastet am Weg.',merchant:{name:choose(names),stock,grimoireRarity:1}};
 }
-function makeDiscovery(pos){const r=Math.random(),reward=r<.42?{kind:'book',book:book('grimoire')}:r<.72?{kind:'book',book:book('ability')}:r<.9?{kind:'gold',amount:40+Math.floor(Math.random()*111)}:{kind:'material',name:'Kristall aus einer vergessenen Truhe',rarity:'Selten',element:choose(elements)};return{id:S.eventSeq++,x:pos.x,y:pos.y,type:'discovery',hidden:Math.random()<.2,revealed:false,persistent:false,text:choose(['Eine verwitterte Truhe liegt zwischen den Wurzeln.','In einem verlassenen Lager wartet ein Fund.','Du entdeckst eine Nische in einer alten Ruine.']),reward,claimed:false}}
+function makeDiscovery(pos){const r=Math.random(),reward=r<GRIMOIRE_CHANCE?{kind:'book',book:book('grimoire')}:r<GRIMOIRE_CHANCE+.30?{kind:'book',book:book('ability')}:r<.9?{kind:'gold',amount:40+Math.floor(Math.random()*111)}:{kind:'material',name:'Kristall aus einer vergessenen Truhe',rarity:'Selten',element:choose(elements)};return{id:S.eventSeq++,x:pos.x,y:pos.y,type:'discovery',hidden:Math.random()<.2,revealed:false,persistent:false,text:choose(['Eine verwitterte Truhe liegt zwischen den Wurzeln.','In einem verlassenen Lager wartet ein Fund.','Du entdeckst eine Nische in einer alten Ruine.']),reward,claimed:false,grimoireRarity:1}}
 function createTravelEvent(pos,forced){let t=terrain(pos.x,pos.y),roll=Math.random(),type=forced||(t==='road'?(roll<.4?'merchant':roll<.7?'discovery':roll<.9?'combat':'person'):(roll<.12?'merchant':roll<.47?'discovery':roll<.92?'combat':'person'));
  if(type==='merchant')return makeMerchant(pos);if(type==='discovery')return makeDiscovery(pos);
  if(type==='combat'){const m=generateMonsterEncounter(pos.x,pos.y);return{id:S.eventSeq++,x:pos.x,y:pos.y,type:'combat',hidden:false,revealed:false,persistent:false,text:'Monsterbegegnung: '+m.name,monster:m}}
@@ -1064,6 +1066,14 @@ window.copyTravelBook=async function(id){const b=S.travelBooks.find(x=>x.id===id
 window.writeTravelBook=function(id){const b=S.travelBooks.find(x=>x.id===id);if(!b?.opened)return;if(b.kind==='grimoire'){openExtraPage('grimoire');document.getElementById('spellElement').value=b.element;document.getElementById('spellName').focus()}else{openExtraPage('abilities');clearAbilityEditor();document.getElementById('abilityName').focus()}};
 window.completeTravelBook=function(id){const b=S.travelBooks.find(x=>x.id===id);if(!b?.opened)return;b.completed=!b.completed;save()};
 const originalRender=render;render=function(){originalRender();renderBooks()};
+// Apply the new rarity once to unclaimed, previously generated content.
+// Purchased books and already collected rewards stay with the player.
+let rarityChanged=false;
+for(const e of S.events||[]){
+ if(e.type==='merchant'&&e.merchant&&e.merchant.grimoireRarity!==1){const old=e.merchant.stock.filter(o=>!o.sold&&o.kind==='book'&&o.book?.kind==='grimoire'),keep=old.length&&Math.random()<GRIMOIRE_CHANCE?choose(old):null;e.merchant.stock=e.merchant.stock.filter(o=>o.sold||o.kind!=='book'||o.book?.kind!=='grimoire'||o===keep);e.merchant.grimoireRarity=1;rarityChanged=true}
+ if(e.type==='discovery'&&e.grimoireRarity!==1){if(!e.claimed&&e.reward?.kind==='book'&&e.reward.book?.kind==='grimoire'&&Math.random()>=GRIMOIRE_CHANCE)e.reward={kind:'gold',amount:40+Math.floor(Math.random()*111)};e.grimoireRarity=1;rarityChanged=true}
+}
+if(rarityChanged)save();
 // Once for existing saves: a nearby merchant and a discovery make the new content discoverable.
 if(!S.travelEncountersVersion){const p=nearbySpot(true)||nearbySpot();if(p)S.events.push(createTravelEvent(p,'merchant'));const q=nearbySpot();if(q)S.events.push(createTravelEvent(q,'discovery'));S.travelEncountersVersion=1;save()}
 window.travelEncounterDebug={createTravelEvent,nearbySpot,promptFor};renderBooks();renderMap();
