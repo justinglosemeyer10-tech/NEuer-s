@@ -130,7 +130,7 @@ S.mas=S.mas||{};
 W.forEach(w=>{if(!S.mas[w]||typeof S.mas[w]!=='object')S.mas[w]={l:0,p:0};else{S.mas[w].l=Math.max(0,Math.min(10,Number(S.mas[w].l)||0));S.mas[w].p=Math.max(0,Math.min(9,Number(S.mas[w].p)||0))}});if(__storageRepair){try{let clean=JSON.stringify(S);localStorage.removeItem('RPGV33');try{localStorage.setItem('RPGV33',clean)}catch(err){try{if(__rawSave)localStorage.setItem('RPGV33',__rawSave)}catch(_){}console.error(err)}}catch(e){console.error(e)}}const __academyBoost={1:[45,65,35,45,40,70],2:[40,25,65,55,70,45],3:[50,25,65,45,75,40],4:[55,80,25,85,30,25],5:[35,35,55,30,70,75],6:[55,70,55,55,35,30],7:[40,25,70,35,90,40],8:[45,85,25,75,40,30],9:[45,55,35,45,50,70],10:[40,55,40,70,35,60],11:[40,35,65,45,70,45],12:[35,55,30,25,45,110],13:[50,65,65,55,40,25],14:[45,30,75,35,85,30],15:[30,80,40,25,75,50]};if(!S.academyBoost300Applied){(S.npcs||[]).forEach(n=>{let b=__academyBoost[n.id];if(b)K.forEach((k,i)=>n.stats[k]=(Number(n.stats[k])||0)+b[i])});S.academyBoost300Applied=true;try{localStorage.setItem('RPGV33',JSON.stringify(S))}catch(e){console.error('Akademie-Bonus konnte noch nicht gespeichert werden',e)}}if(!S.academyClassGapV3192Applied){const gap={'Klasse 1':0,'Klasse 2':200,'Klasse 3':450,'Lehrer':750};(S.npcs||[]).forEach(n=>{let g=gap[n.g]||0,base=Math.floor(g/K.length),rest=g-base*K.length;K.forEach((k,i)=>n.stats[k]=(Number(n.stats[k])||0)+base+(i<rest?1:0))});S.academyClassGapV3192Applied=true;try{localStorage.setItem('RPGV33',JSON.stringify(S))}catch(e){console.error('Klassenabstand konnte noch nicht gespeichert werden',e)}}S.tasks.forEach(t=>{if(t.dailyLimit==null)t.dailyLimit=0});
 S.events=S.events||[];S.eventSeq=S.eventSeq||1;S.compare=S.compare||{a:'p',b:'n1'};
 S.materials=S.materials||[];S.gold=Math.max(0,Number(S.gold)||0);S.forge=S.forge||{level:0,xp:0,last:null};S.shop=S.shop||{date:'',stock:[]};S.shop.stock=Array.isArray(S.shop.stock)?S.shop.stock:[];S.eventDate=S.eventDate||'';S.forge.level=Math.max(0,Math.min(10,Number(S.forge.level)||0));S.forge.xp=Math.max(0,Number(S.forge.xp)||0);const MAT_BASE={Gewöhnlich:10,Selten:35,Episch:120,Legendär:450,Mystisch:1800};S.materials.forEach(m=>{if(!(Number(m.value)>0))m.value=MAT_BASE[m.rarity]||10;if(m.element==null||m.element==='Normal')m.element='Neutral'});S.monsterWins=S.monsterWins||0;S.levelPending=S.levelPending||{points:0,random:[]};S.alpha=S.alpha||{stats:os([1,1,1,1,1,1]),focus:'speed',remainder:os(),abilities:[],magic:[],lastGain:0};S.alpha.remainder=S.alpha.remainder||os();S.alpha.abilities=S.alpha.abilities||[];S.alpha.magic=S.alpha.magic||[];S.alpha.weapon=S.alpha.weapon||'';S.alpha.element=S.alpha.element||'';S.alpha.description=S.alpha.description||'';S.alpha.snapshots=Array.isArray(S.alpha.snapshots)?S.alpha.snapshots:[];S.spells=Array.isArray(S.spells)?S.spells:[];S.regen=S.regen||{level:1,hpTick:1,hpInterval:1200,mpTick:1,mpInterval:20,choices:[],history:[]};S.regen.choices=S.regen.choices||[];S.regen.history=S.regen.history||[];S.vitals=S.vitals||{hp:null,mp:null,lastUpdate:Date.now()};S.map=S.map||{x:12,y:9,stamina:null,lastUpdate:Date.now(),regenInterval:600,boat:false};
-const MW=100,MH=75,MAP_CITIES={
+const MW=100,MH=100,MAP_CITIES={
 '50,37':{name:'Hauptstadt',kind:'Hauptstadt'},'50,6':{name:'Eisdorf',kind:'Eis'},'86,10':{name:'Feuerdorf',kind:'Feuer'},'92,37':{name:'Donnerdorf',kind:'Donner'},'84,66':{name:'Erddorf',kind:'Erde'},'49,69':{name:'Winddorf',kind:'Wind'},'10,64':{name:'Wasserdorf',kind:'Wasser'},'9,37':{name:'Schattendorf',kind:'Schatten'},'13,10':{name:'Lichtdorf',kind:'Licht'}};
 const MAP_COST={road:1,grass:2,forest:3,dark:4,desert:3,snow:3,mountain:5,river:6,water:4,volcano:5};
 let mapMode='travel',camX=50,camY=37,mapZoom=34,mapPointers=new Map(),dragLast=null,pinchStart=null;
@@ -856,4 +856,154 @@ async function copyDungeonChatExport(){
  try{await navigator.clipboard.writeText(value);alert('Dungeon-Charakterdaten kopiert! Jetzt in ChatGPT einfuegen.')}
  catch(e){const ta=document.createElement('textarea');ta.value=value;ta.style.cssText='position:fixed;inset:10%;width:80%;height:70%;z-index:99999';document.body.appendChild(ta);ta.focus();ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(_){}if(ok){ta.remove();alert('Dungeon-Charakterdaten kopiert!')}else alert('Text markieren und kopieren. Danach dieses Feld entfernen oder die Seite neu laden.')}
 }
+</script><script>
+/* Pixel atlas: one 100 × 100 world, read-only kingdom overlay. */
+(()=>{
+'use strict';
+const cities=[['Hauptstadt',50,50],['Eisdorf',50,3],['Feuerdorf',91,10],['Donnerdorf',96,50],['Erddorf',90,90],['Winddorf',50,96],['Wasserdorf',10,90],['Schattendorf',3,50],['Lichtdorf',9,10]];
+const colors=['#e5c56b','#78cbed','#ef6a3a','#d6ad46','#9b8558','#7cbf86','#428fdf','#8464b6','#e8d99d'];
+const originalTerrain=terrain,oldCities=Object.entries(MAP_CITIES);
+const roads=new Set();cities.slice(1).forEach(c=>lineRoad(roads,[50,50],[c[1],c[2]]));
+// Project the existing biomes into the kingdom coordinate system.
+const biomes=Array.from({length:10000},(_,i)=>originalTerrain(i%100,Math.round(Math.floor(i/100)*74/99)));
+Object.keys(MAP_CITIES).forEach(k=>delete MAP_CITIES[k]);
+cities.forEach((c,i)=>MAP_CITIES[c[1]+','+c[2]]={name:c[0],kind:['Hauptstadt','Eis','Feuer','Donner','Erde','Wind','Wasser','Schatten','Licht'][i]});
+terrain=function(x,y){if(x<0||y<0||x>99||y>99)return'water';if(MAP_CITIES[x+','+y]||roads.has(x+','+y))return'road';return biomes[y*100+x]==='road'?'grass':biomes[y*100+x]||'grass'};
+migrateMap();
+if(!S.map.atlasVersion){
+ const oldX=S.map.x,oldY=S.map.y,city=oldCities.find(([k])=>k===oldX+','+oldY);
+ const found=city&&cities.find(c=>c[0]===city[1].name);
+ S.map.x=found?found[1]:oldX;S.map.y=found?found[2]:Math.round(oldY*99/74);
+ (S.events||[]).forEach(e=>e.y=Math.max(0,Math.min(99,Math.round(e.y*99/74))));
+ S.map.atlasVersion=1;
+ try{localStorage.setItem('RPGV33',JSON.stringify(S))}catch(e){console.error('Kartenstand konnte nicht gespeichert werden',e)}
+}
+const style=document.createElement('style');style.textContent=`
+#map .atlas-card{padding:0;overflow:hidden;border-color:#3a4c47;background:#111d1d}
+#map .atlas-top{padding:18px 18px 10px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+#map .atlas-kicker{font-size:10px;letter-spacing:3px;color:#b6c6a1;margin-bottom:5px}#map .atlas-top h2{margin:0;font-family:Georgia,serif;font-size:27px;color:#f2e9cb}
+#map .atlas-tools{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 12px}#map .atlas-tools .btn{font-size:12px;min-height:40px;background:#203330;border-color:#40554b;color:#e6e8cd}
+#map #mapWrap{display:block!important;position:relative;height:clamp(360px,62vh,620px)!important;overflow:hidden!important;touch-action:none!important;margin:0!important;border:0;border-radius:0;background:#152b2d;cursor:grab}
+#map #mapWrap:active{cursor:grabbing}#map #atlasCanvas{width:100%;height:100%;margin:0;border-radius:0;background:#152b2d;image-rendering:pixelated;touch-action:none}
+#map .atlas-pad{position:absolute;right:10px;bottom:10px;display:grid;grid-template-columns:34px 34px 34px;gap:3px}#map .atlas-pad button{padding:0;height:34px;background:#132b28e8;border:1px solid #8b9b72;color:#eee7c9;border-radius:7px}#map .atlas-caption{position:absolute;left:12px;bottom:12px;pointer-events:none;padding:7px 10px;background:#10201fdf;color:#e3e6ce;font-size:11px;border:1px solid #71816a66;border-radius:7px}
+#map .atlas-bottom{padding:12px 14px;border-top:1px solid #40554b;color:#c1caba;font-size:12px;line-height:1.6}#map .atlas-bottom b{color:#eee7c9}
+#map .atlas-destinations{display:flex;gap:7px;overflow-x:auto;padding:0 14px 14px}#map .atlas-destinations button{flex:0 0 auto;font-size:12px;background:#1b2d2b;color:#e6e8cd;border:1px solid #40554b;border-radius:9px;padding:9px 12px}
+#map #mapInfo{border-color:#526850;background:linear-gradient(120deg,#1c302a,#18221f)}#map #mapInfo h3{margin:5px 0 8px;color:#eee7c9}#map #atlasTravel{background:#d3df9d;color:#18251d;border:0}#map .atlas-route-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}#map .atlas-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:11px}#map .atlas-legend i{width:8px;height:8px;display:inline-block;margin-right:4px}
+`;document.head.appendChild(style);
+const section=document.getElementById('map'),oldWrap=document.getElementById('mapWrap'),card=oldWrap.parentElement;
+card.className='card atlas-card';card.innerHTML=`<div class="atlas-top"><div><div class="atlas-kicker">DIE NEUN REICHE</div><h2>Deine Welt.</h2></div><span class="tag">100 × 100</span></div><div class="atlas-tools"><button class="btn" id="atlasFit">⊞ Welt</button><button class="btn" id="atlasFollow">◎ Zu mir</button><button class="btn" id="atlasMinus" aria-label="Verkleinern">−</button><button class="btn" id="atlasPlus" aria-label="Vergrößern">+</button><button class="btn" id="atlasBorders" aria-pressed="true">Grenzen an</button></div><div id="mapWrap"><canvas id="atlasCanvas" tabindex="0" role="img" aria-label="Interaktive Weltkarte. Ziehen zum Verschieben, plus und minus zum Zoomen. Reiseziele über die Ortsliste wählen; Pfeiltasten bewegen den Charakter."></canvas><div class="atlas-caption" id="atlasCaption"></div><div class="atlas-pad" aria-label="Einzelne Reiseschritte"><button style="grid-column:2" onclick="mapArrow(0,-1)" aria-label="Nach Norden">↑</button><button style="grid-column:1;grid-row:2" onclick="mapArrow(-1,0)" aria-label="Nach Westen">←</button><button style="grid-column:2;grid-row:2" onclick="mapArrow(0,1)" aria-label="Nach Süden">↓</button><button style="grid-column:3;grid-row:2" onclick="mapArrow(1,0)" aria-label="Nach Osten">→</button></div></div><div class="atlas-bottom"><b>Ziehen zum Erkunden · Ziel antippen zum Reisen</b><br>Zwei Finger oder + / − zum Zoomen. Pfeiltasten für einzelne Schritte.</div><div class="atlas-destinations" id="atlasDestinations"></div>`;
+// Put the world first; keep the existing hunt and travel settings available below it.
+section.prepend(card);const info=document.getElementById('mapInfo');card.after(info);info.after(document.getElementById('mapPos').closest('.card'));
+const canvas=document.getElementById('atlasCanvas'),ctx=canvas.getContext('2d'),wrap=document.getElementById('mapWrap');
+let width=700,height=500,zoom=1,cx=S.map.x,cy=S.map.y,fitted=false,borders=true,target=null,route=null,timer=null,running=false,notice='',raf=0,kingdom=null,kingdomRaw=null;
+// Render once at native pixel resolution. Shared noise creates continuous landforms,
+// while displaced silhouettes avoid repeated tile patterns.
+const base=document.createElement('canvas');base.width=base.height=2400;const b=base.getContext('2d');
+const UNIT=24;
+function noise(x,y){let n=Math.imul(x+17,374761393)^Math.imul(y+53,668265263);n=Math.imul(n^(n>>>13),1274126177);return(n>>>0)/4294967296}
+function smoothNoise(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy);return(noise(ix,iy)*(1-sx)+noise(ix+1,iy)*sx)*(1-sy)+(noise(ix,iy+1)*(1-sx)+noise(ix+1,iy+1)*sx)*sy}
+const palette={grass:[126,151,88],road:[139,157,93],forest:[75,112,68],dark:[66,77,83],desert:[198,167,105],snow:[202,220,207],mountain:[125,139,112],river:[71,139,145],water:[49,111,125],volcano:[108,91,76]};
+function ground(x,y){const tx=Math.max(0,Math.min(99,Math.floor(x))),ty=Math.max(0,Math.min(99,Math.floor(y)));let t=terrain(tx,ty);if(t==='road'){t=biomes[ty*100+tx];if(t==='road')t='grass'}return t}
+// A fine pixel mosaic with warped biome boundaries and broad patches of light.
+const pixels=b.createImageData(1200,1200);
+for(let py=0;py<1200;py++)for(let px=0;px<1200;px++){
+ const x=px/12,y=py/12,warpX=(smoothNoise(x*.65,y*.65)-.5)*.68,warpY=(smoothNoise(x*.65+81,y*.65+21)-.5)*.68,t=ground(x+warpX,y+warpY),color=palette[t];
+ const broad=smoothNoise(x*.12,y*.12),fine=smoothNoise(x*1.3,y*1.3),grain=noise(px,py),light=(broad-.5)*27+(fine-.5)*12+(grain-.5)*5;
+ const at=(py*1200+px)*4;for(let c=0;c<3;c++)pixels.data[at+c]=Math.max(0,Math.min(255,color[c]+light));pixels.data[at+3]=255;
+}
+const mosaic=document.createElement('canvas');mosaic.width=mosaic.height=1200;mosaic.getContext('2d').putImageData(pixels,0,0);b.imageSmoothingEnabled=false;b.drawImage(mosaic,0,0,2400,2400);
+function polygon(points,fill){b.fillStyle=fill;b.beginPath();points.forEach(([x,y],i)=>i?b.lineTo(x,y):b.moveTo(x,y));b.closePath();b.fill()}
+function tree(x,y,size,dark=false,pine=false){
+ b.save();b.translate(Math.round(x),Math.round(y));b.scale(size/20,size/20);
+ b.fillStyle='#233e342e';b.fillRect(-7,0,20,5);b.fillStyle='#635c3e';b.fillRect(-1,-3,3,8);
+ if(pine){polygon([[-9,-2],[-5,-7],[-7,-7],[-3,-13],[-5,-13],[0,-23],[5,-13],[3,-13],[8,-7],[5,-7],[10,-2]],dark?'#2d4143':'#365d43');polygon([[-7,-3],[-2,-9],[-4,-9],[0,-20],[1,-12],[4,-10],[1,-10],[5,-4]],dark?'#56625b':'#64835b');b.fillStyle=dark?'#6c7770':'#9aaa78';b.fillRect(-1,-17,2,3)}
+ else{polygon([[-9,-2],[-12,-7],[-11,-13],[-7,-15],[-6,-20],[1,-23],[7,-20],[8,-15],[12,-12],[11,-5],[6,-2]],dark?'#293d40':'#31583b');polygon([[-10,-8],[-8,-14],[-4,-15],[-4,-20],[2,-21],[7,-17],[5,-13],[9,-11],[6,-6],[1,-5],[-2,-8]],dark?'#465855':'#52784b');b.fillStyle=dark?'#657467':'#8ba063';b.fillRect(-4,-18,5,3);b.fillRect(-7,-13,3,3);b.fillStyle=dark?'#354a49':'#3e663e';b.fillRect(3,-9,5,3)}b.restore();
+}
+function mountain(x,y,size,snow=false,fire=false){b.save();b.translate(Math.round(x),Math.round(y));b.scale(size/40,size/40);polygon([[-22,5],[-8,-5],[16,-3],[26,8],[1,13]],'#34483c35');polygon([[-22,5],[-15,-4],[-12,-4],[-4,-23],[1,-29],[5,-25],[12,-9],[16,-7],[23,6]],fire?'#504d46':'#677568');polygon([[-22,5],[-15,-4],[-12,-4],[-4,-23],[1,-29],[-1,-11],[-5,-8],[-7,0],[-2,4]],fire?'#837360':'#a0ab8b');polygon([[1,-29],[5,-25],[12,-9],[8,-12],[7,-7],[3,-15],[-1,-11]],snow?'#e5ead5':fire?'#e6b57a':'#d1d3b2');polygon([[-7,0],[-4,-7],[1,-12],[0,-2],[6,3],[14,6]],fire?'#685a49':'#88947a');if(fire){b.fillStyle='#eea35f';b.fillRect(0,-21,2,9);b.fillStyle='#c97849';b.fillRect(2,-12,2,7)}b.restore()}
+// Quiet details in the clearings and waves, rather than a symbol on every cell.
+for(let y=0;y<100;y++)for(let x=0;x<100;x++){
+ const t=ground(x+.5,y+.5),n=noise(x+71,y+23),px=(x+.2+noise(x,y)*.6)*UNIT,py=(y+.2+noise(y,x)*.6)*UNIT;
+ if((t==='water'||t==='river')&&n>.55){b.fillStyle='#a1d2c14c';b.fillRect(px,py,5+n*10,2);b.fillStyle='#204e6930';b.fillRect(px+5,py+4,10,2)}
+ if(t==='grass'&&n>.84){b.fillStyle='#b8be803e';b.fillRect(px,py,8,2);b.fillStyle='#477a4d60';b.fillRect(px+2,py-3,2,4);b.fillRect(px+6,py-2,2,3);if(n>.97){b.fillStyle='#dbcca2';b.fillRect(px+9,py-3,2,2)}}
+ if(t==='desert'&&n>.6){b.strokeStyle='#f3d99c44';b.lineWidth=2;b.beginPath();b.moveTo(px-8,py+3);b.quadraticCurveTo(px,py-2,px+14,py);b.stroke()}
+ if(t==='snow'&&n>.8){b.fillStyle='#f0f1dc90';b.fillRect(px,py,5,2);b.fillRect(px+6,py+4,9,2)}
+}
+// Narrow, connected routes. These are the actual traversable road cells.
+const allRoads=new Set(roads);for(let y=0;y<100;y++)for(let x=0;x<100;x++)if(terrain(x,y)==='road')allRoads.add(x+','+y);
+cities.slice(1).forEach(c=>{let x=50,y=50,guard=0;const path=[[x,y]];while((x!==c[1]||y!==c[2])&&guard++<600){if(x!==c[1]&&((x+y+guard)%5!==0||y===c[2]))x+=Math.sign(c[1]-x);else if(y!==c[2])y+=Math.sign(c[2]-y);path.push([x,y])}for(const [color,lineWidth]of [['#68764b66',7],['#d7c99a',3.5]]){b.strokeStyle=color;b.lineWidth=lineWidth;b.lineCap='round';b.lineJoin='round';b.beginPath();b.moveTo((path[0][0]+.5)*UNIT,(path[0][1]+.5)*UNIT);for(let i=1;i<path.length-1;i++){const p=path[i],n=path[i+1];b.quadraticCurveTo((p[0]+.5)*UNIT,(p[1]+.5)*UNIT,((p[0]+n[0])/2+.5)*UNIT,((p[1]+n[1])/2+.5)*UNIT)}const last=path[path.length-1];b.lineTo((last[0]+.5)*UNIT,(last[1]+.5)*UNIT);b.stroke()}});
+// Trees vary in spacing, height and silhouette. Paint from north to south.
+for(let y=0;y<200;y++)for(let x=0;x<200;x++){
+ const wx=x/2+noise(x,y)*.45,wy=y/2+noise(y+44,x)*.45,t=ground(wx,wy),n=noise(x+301,y+49),tx=Math.floor(wx),ty=Math.floor(wy);
+ if(allRoads.has(tx+','+ty)||MAP_CITIES[tx+','+ty])continue;
+ const forest=t==='forest'||t==='dark',patch=smoothNoise(wx*.35,wy*.35);
+ if((forest&&n>(patch>.5?.22:.46))||(t==='grass'&&patch>.69&&n>.87)||(t==='snow'&&wy>12&&n>.94))tree(wx*UNIT,wy*UNIT,forest?15+n*12:12+n*9,t==='dark',t==='snow'||n>.65);
+}
+// Larger overlapping peaks form ridgelines, with light on their western slopes.
+for(let y=0;y<100;y++)for(let x=0;x<100;x++){
+ const t=ground(x+.5,y+.5),n=noise(x+513,y+87);if(allRoads.has(x+','+y)||MAP_CITIES[x+','+y])continue;
+ if(t==='mountain'&&n>.48)mountain((x+.3+noise(x,y)*.5)*UNIT,(y+.7)*UNIT,39+n*35,true);
+ if(t==='volcano'&&n>.93)mountain((x+.5)*UNIT,(y+.7)*UNIT,26+n*25,false,true);
+}
+// Small settlements are part of the landscape and remain crisp when zooming in.
+function house(x,y,roof){b.fillStyle='#293f3633';b.fillRect(x-5,y+2,20,6);b.fillStyle='#d5c8a1';b.fillRect(x-6,y-7,13,13);b.fillStyle='#a89976';b.fillRect(x+2,y-7,5,13);polygon([[x-9,y-7],[x,y-15],[x+10,y-7]],roof);b.fillStyle='#4e6551';b.fillRect(x-1,y,3,6);b.fillRect(x-4,y-5,2,3)}
+cities.forEach((c,i)=>{const px=(c[1]+.5)*UNIT,py=(c[2]+.5)*UNIT;b.fillStyle='#c6bc8e';b.beginPath();b.ellipse(px,py+3,i?23:34,i?13:20,0,0,Math.PI*2);b.fill();house(px-16,py+9,i===1?'#71969b':i===2?'#a76d50':'#8b785c');house(px+17,py-1,i===7?'#6d657b':'#92765b');if(i===0){house(px-20,py-16,'#788a70');house(px+25,py+17,'#92765b')}b.fillStyle='#756e55';b.fillRect(px-9,py-19,18,26);b.fillStyle='#ded6b5';b.fillRect(px-9,py-19,13,23);b.fillStyle='#bec1a0';b.fillRect(px-12,py-24,7,26);b.fillRect(px+5,py-24,7,26);b.fillStyle=colors[i];b.fillRect(px-12,py-28,7,6);b.fillRect(px+5,py-28,7,6);b.fillRect(px-4,py-22,8,6);b.fillStyle='#3e5650';b.fillRect(px-2,py-4,5,10)});
+
+function readKingdom(){try{const raw=localStorage.getItem('RPG_KINGDOMS_V2');if(raw!==kingdomRaw){kingdomRaw=raw;const k=JSON.parse(raw||'null');kingdom=k?.tiles?.length===10000?k:null}}catch{kingdom=null}}
+function fit(){zoom=Math.min(width,height)/100;cx=cy=50;fitted=true;schedule()}
+function clampCamera(){cx=Math.max(0,Math.min(100,cx));cy=Math.max(0,Math.min(100,cy))}
+function schedule(){if(!raf)raf=requestAnimationFrame(draw)}
+function point(x,y){return[(x-cx)*zoom+width/2,(y-cy)*zoom+height/2]}
+function draw(){raf=0;if(!section.classList.contains('active'))return;ctx.imageSmoothingEnabled=false;ctx.fillStyle='#152b2d';ctx.fillRect(0,0,width,height);const [ox,oy]=point(0,0);ctx.drawImage(base,ox,oy,100*zoom,100*zoom);
+ if(borders&&kingdom){ctx.lineWidth=1.5;for(let y=0;y<100;y++)for(let x=0;x<100;x++){const i=y*100+x,k=kingdom.tiles[i];if(k<0||k>8)continue;const [px,py]=point(x,y);ctx.fillStyle=colors[k]+'28';ctx.fillRect(px,py,zoom,zoom);ctx.strokeStyle=colors[k];ctx.beginPath();if(x===0||kingdom.tiles[i-1]!==k){ctx.moveTo(px,py);ctx.lineTo(px,py+zoom)}if(y===0||kingdom.tiles[i-100]!==k){ctx.moveTo(px,py);ctx.lineTo(px+zoom,py)}if(x===99||kingdom.tiles[i+1]!==k){ctx.moveTo(px+zoom,py);ctx.lineTo(px+zoom,py+zoom)}if(y===99||kingdom.tiles[i+100]!==k){ctx.moveTo(px,py+zoom);ctx.lineTo(px+zoom,py+zoom)}ctx.stroke()}}
+ if(route?.steps.length){ctx.strokeStyle='#f4e0a1';ctx.lineWidth=2.5;ctx.setLineDash([5,4]);ctx.beginPath();let p=point(S.map.x+.5,S.map.y+.5);ctx.moveTo(...p);route.steps.forEach(s=>ctx.lineTo(...point(s.x+.5,s.y+.5)));ctx.stroke();ctx.setLineDash([])}
+ // Region names sit on the landscape, while city names remain readable at every scale.
+ if(zoom<15){ctx.save();ctx.textAlign='center';ctx.font='italic '+Math.max(11,Math.min(19,zoom*2.1))+'px Georgia';ctx.fillStyle='#f0ebc9a0';ctx.shadowColor='#233e39';ctx.shadowBlur=3;[['Der Frostsaum',51,13],['Glutlande',85,23],['Donnerdünen',84,45],['Das Erdgebirge',85,78],['Südliche Auen',48,86],['Die Saphirküste',14,81],['Schattenhain',13,43],['Lichter Hain',22,15]].forEach(([name,rx,ry])=>ctx.fillText(name,...point(rx,ry)));ctx.restore()}
+ cities.forEach((c,i)=>{const [x,y]=point(c[1]+.5,c[2]+.5);if(x<-80||y<-30||x>width+80||y>height+30)return;
+ ctx.fillStyle=colors[i];ctx.strokeStyle='#203c33';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,zoom<8?3:2,0,Math.PI*2);ctx.stroke();ctx.fill();
+ {ctx.font='600 '+(zoom<5?'9':'11')+'px system-ui';ctx.textAlign='center';const tw=ctx.measureText(c[0]).width,labelY=y+Math.max(12,zoom*.6);ctx.fillStyle='#132c29e8';ctx.fillRect(x-tw/2-7,labelY,tw+14,19);ctx.fillStyle=colors[i]+'99';ctx.fillRect(x-tw/2-7,labelY,tw+14,1);ctx.fillStyle='#f0e8c9';ctx.fillText(c[0],x,labelY+13)}});
+ // A quiet compass rose adds orientation without covering destinations.
+ ctx.save();ctx.translate(width-31,35);ctx.strokeStyle='#e3d9ac99';ctx.fillStyle='#e3d9ac';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,-12);ctx.lineTo(4,4);ctx.lineTo(0,1);ctx.lineTo(-4,4);ctx.closePath();ctx.stroke();ctx.fillStyle='#bdc3a7';ctx.font='10px Georgia';ctx.textAlign='center';ctx.fillText('N',0,-17);ctx.restore();
+ (S.events||[]).filter(e=>e.revealed||!e.hidden).forEach(e=>{const [x,y]=point(e.x+.5,e.y+.5);ctx.fillStyle=e.revealed?'#c8d89a':'#f1cc79';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#192923';ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillText(e.revealed?'◆':'?',x,y+3)});
+ if(target){const [x,y]=point(target.x+.5,target.y+.5);ctx.strokeStyle='#f2dea0';ctx.lineWidth=2;ctx.strokeRect(x-8,y-8,16,16)}
+ const [px,py]=point(S.map.x+.5,S.map.y+.5);ctx.strokeStyle='#122923';ctx.lineWidth=4;ctx.fillStyle='#f7f0cc';ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.stroke();ctx.fill();ctx.strokeStyle='#f7f0cc88';ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,11,0,Math.PI*2);ctx.stroke();
+ document.getElementById('atlasCaption').textContent='◎ Du · '+Math.round(zoom/(Math.min(width,height)/100)*100)+' % · '+(borders?(kingdom?'Aktuelle Reichsgrenzen':'Noch keine Reichsgrenzen gespeichert'):'Grenzen ausgeblendet');
+}
+function resize(){const r=wrap.getBoundingClientRect();if(!r.width)return;width=r.width;height=r.height;const d=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(width*d);canvas.height=Math.round(height*d);ctx.setTransform(d,0,0,d,0,0);if(!fitted)fit();schedule()}
+function zoomAt(f,x=width/2,y=height/2){const wx=cx+(x-width/2)/zoom,wy=cy+(y-height/2)/zoom;zoom=Math.max(Math.min(width,height)/100,Math.min(40,zoom*f));cx=wx-(x-width/2)/zoom;cy=wy-(y-height/2)/zoom;clampCamera();schedule()}
+// Dijkstra with a binary heap: the preview uses the same costs and ice slides as moveMap.
+function findRoute(tx,ty){if(!canEnter(tx,ty))return null;const start=S.map.y*100+S.map.x,end=ty*100+tx,dist=new Float64Array(10000).fill(Infinity),prev=new Int32Array(10000).fill(-1),dirs=new Int8Array(10000),heap=[];dist[start]=0;
+ const push=(v)=>{heap.push(v);let i=heap.length-1;while(i){const p=(i-1)>>1;if(heap[p][0]<=v[0])break;heap[i]=heap[p];i=p}heap[i]=v};
+ const pop=()=>{const top=heap[0],v=heap.pop();if(heap.length){let i=0;while(i*2+1<heap.length){let j=i*2+1;if(j+1<heap.length&&heap[j+1][0]<heap[j][0])j++;if(heap[j][0]>=v[0])break;heap[i]=heap[j];i=j}heap[i]=v}return top};
+ const ds=[[1,0],[-1,0],[0,1],[0,-1]];push([0,start]);
+ while(heap.length){const [cost,i]=pop();if(cost!==dist[i])continue;if(i===end)break;const x=i%100,y=Math.floor(i/100);ds.forEach(([dx,dy],di)=>{let nx=x+dx,ny=y+dy;if(!canEnter(nx,ny))return;let c=MAP_COST[terrain(nx,ny)]||2;if(terrain(nx,ny)==='snow'&&canEnter(nx+dx,ny+dy)&&terrain(nx+dx,ny+dy)==='snow'){nx+=dx;ny+=dy;c+=MAP_COST.snow}const j=ny*100+nx;if(cost+c<dist[j]){dist[j]=cost+c;prev[j]=i;dirs[j]=di;push([dist[j],j])}})}
+ if(!Number.isFinite(dist[end]))return null;const steps=[];for(let i=end;i!==start;i=prev[i]){if(i<0)return null;const [dx,dy]=ds[dirs[i]];steps.push({x:i%100,y:Math.floor(i/100),dx,dy})}return{cost:dist[end],steps:steps.reverse()};
+}
+function blocked(){return(S.events||[]).some(e=>e.type==='combat'&&e.revealed&&!e.monster?.defeated&&e.x===S.map.x&&e.y===S.map.y)}
+function panel(){const x=target?.x??S.map.x,y=target?.y??S.map.y,t=terrain(x,y),city=MAP_CITIES[x+','+y],here=x===S.map.x&&y===S.map.y;
+ info.innerHTML='<div class="small">'+(here?'DEIN STANDORT':'REISEZIEL')+' · '+x+' / '+y+'</div><h3>'+(city?city.name:terrainName(t))+'</h3><div class="small">'+(notice|| (here?'Wähle ein Ziel auf der Karte oder einen Ort aus der Liste.':route?route.steps.length+' Reiseschritte · '+route.cost+' Ausdauer · verfügbar '+Math.floor(S.map.stamina):'Kein passierbarer Weg'+(!S.map.boat?' · Wasser benötigt ein Boot.':'.')))+'</div>'+
+ (!here&&route?'<div class="atlas-route-row"><button class="btn primary" id="atlasTravel" '+(running||!route.steps.length||S.map.stamina<route.cost||blocked()?'disabled':'')+'>'+(running?'Unterwegs …':'Hierhin reisen')+'</button><button class="btn" id="atlasCancel">'+(running?'Reise stoppen':'Ziel aufheben')+'</button></div>':'')+eventInfo(eventAt(S.map.x,S.map.y));
+ document.getElementById('atlasTravel')?.addEventListener('click',startTravel);document.getElementById('atlasCancel')?.addEventListener('click',()=>{stop();target=null;route=null;notice='';panel();schedule()});
+}
+function select(x,y){stop();target={x,y};notice='';route=findRoute(x,y);panel();schedule()}
+function stop(){clearTimeout(timer);timer=null;running=false}
+function startTravel(){if(!target||!route||blocked())return;route=findRoute(target.x,target.y);applyTravelRegen();if(!route||route.cost>S.map.stamina){notice='Für diese Route fehlt Reiseausdauer.';panel();return}running=true;notice='Du reist. Bei einer Begegnung hältst du automatisch an.';panel();step()}
+function step(){if(!running)return;if(!section.classList.contains('active')||document.hidden){stop();notice='Reise pausiert.';panel();return}const next=route?.steps[0];if(!next){stop();notice='Ziel erreicht.';panel();return}const oldX=S.map.x,oldY=S.map.y;moveMap(next.dx,next.dy);if(S.map.x===oldX&&S.map.y===oldY){stop();notice=blocked()?'Beende oder verlasse zuerst die Begegnung.':'Reise gestoppt: nicht genug Ausdauer oder Feld nicht passierbar.';panel();return}cx=S.map.x;cy=S.map.y;route=findRoute(target.x,target.y);const ev=eventAt(S.map.x,S.map.y);if(ev||!route?.steps.length){stop();notice=ev?'Begegnung entdeckt – deine Reise pausiert hier.':'Ziel erreicht.'}panel();schedule();if(running)timer=setTimeout(step,160)}
+renderMap=function(){applyTravelRegen();const m=mapMax();document.getElementById('travelTxt').textContent=S.map.stamina.toFixed(1)+' / '+m;document.getElementById('travelFill').style.width=Math.min(100,S.map.stamina/m*100)+'%';document.getElementById('travelRegenTxt').textContent='Auffüllung um 00:00 und 12:00 Uhr';document.getElementById('mapPos').textContent='('+S.map.x+', '+S.map.y+')';document.getElementById('boatCheck').checked=!!S.map.boat;readKingdom();if(target&&!running)route=findRoute(target.x,target.y);if(section.classList.contains('active'))resize();panel();schedule()};
+setMapMode=function(m){if(m==='overview')fit();else{cx=S.map.x;cy=S.map.y;zoom=Math.max(zoom,20);schedule()}};
+inspectMap=select;
+mapArrow=function(dx,dy){stop();target=null;route=null;notice='';moveMap(dx,dy);cx=S.map.x;cy=S.map.y;schedule()};
+const pointers=new Map();let gesture=null;
+canvas.addEventListener('pointerdown',e=>{canvas.focus({preventScroll:true});canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});gesture={x:e.clientX,y:e.clientY,moved:false,pinch:pointers.size>1}});
+canvas.addEventListener('pointermove',e=>{const p=pointers.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;if(pointers.size===1){cx-=dx/zoom;cy-=dy/zoom;if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>5)gesture.moved=true;clampCamera()}else{gesture.pinch=true;const other=[...pointers.entries()].find(([id])=>id!==e.pointerId)[1],before=Math.hypot(p.x-other.x,p.y-other.y),after=Math.hypot(e.clientX-other.x,e.clientY-other.y),r=canvas.getBoundingClientRect();if(before>0)zoomAt(after/before,(e.clientX+other.x)/2-r.left,(e.clientY+other.y)/2-r.top)}pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});schedule()});
+function release(e){if(!pointers.has(e.pointerId))return;const click=e.type==='pointerup'&&gesture&&!gesture.moved&&!gesture.pinch&&pointers.size===1;pointers.delete(e.pointerId);if(click){const r=canvas.getBoundingClientRect(),x=Math.floor(cx+(e.clientX-r.left-width/2)/zoom),y=Math.floor(cy+(e.clientY-r.top-height/2)/zoom);if(x>=0&&y>=0&&x<100&&y<100)select(x,y)}if(!pointers.size)gesture=null}
+canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.002),e.clientX-r.left,e.clientY-r.top)},{passive:false});
+canvas.addEventListener('keydown',e=>{const ds={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};if(ds[e.key]){e.preventDefault();mapArrow(...ds[e.key])}if(e.key==='+'||e.key==='=')zoomAt(1.4);if(e.key==='-')zoomAt(1/1.4)});
+document.getElementById('atlasFit').onclick=fit;document.getElementById('atlasFollow').onclick=()=>{cx=S.map.x;cy=S.map.y;zoom=Math.max(zoom,22);schedule()};document.getElementById('atlasPlus').onclick=()=>zoomAt(1.4);document.getElementById('atlasMinus').onclick=()=>zoomAt(1/1.4);
+document.getElementById('atlasBorders').onclick=e=>{borders=!borders;e.currentTarget.textContent='Grenzen '+(borders?'an':'aus');e.currentTarget.setAttribute('aria-pressed',String(borders));schedule()};
+const destinations=document.getElementById('atlasDestinations');cities.forEach((c,i)=>{const button=document.createElement('button');button.textContent=c[0];button.style.borderColor=colors[i]+'88';button.onclick=()=>{select(c[1],c[2]);cx=c[1];cy=c[2];schedule()};destinations.append(button)});
+const legend=document.createElement('div');legend.className='atlas-legend';cities.forEach((c,i)=>{const span=document.createElement('span'),dot=document.createElement('i');dot.style.background=colors[i];span.append(dot,document.createTextNode(c[0]));legend.append(span)});card.querySelector('.atlas-bottom').append(legend);
+new ResizeObserver(resize).observe(wrap);document.addEventListener('visibilitychange',()=>{if(document.hidden&&running){stop();notice='Reise pausiert.';panel()}});new MutationObserver(()=>{if(!section.classList.contains('active')&&running){stop();notice='Reise pausiert.';panel()}}).observe(section,{attributes:true,attributeFilter:['class']});
+window.atlasDebug={findRoute,select,fit,stop,getState:()=>({cx,cy,zoom,target,route,running})};renderMap();
+})();
+
 </script></body></html>
