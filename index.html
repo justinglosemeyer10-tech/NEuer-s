@@ -1690,11 +1690,13 @@ const test=document.createElement('button');test.type='button';test.id='spellLea
 for(const section of [shop,forge])section.classList.add('craft-page');renderShop();renderForge();
 })();
 </script><style>
-#volcanoDiscovery{border:1px solid #a87949;background:linear-gradient(135deg,#241b1b,#382018);padding:18px;border-radius:16px;margin:14px 0;color:#ead7c0}
-#volcanoDiscovery.locked{filter:grayscale(1);opacity:.72}#volcanoDiscovery h3{color:#ffba79;margin:5px 0}
-#volcanoDiscovery .volcano-meter{height:7px;background:#181818;border-radius:8px;overflow:hidden;margin:6px 0 12px}
-#volcanoDiscovery .volcano-meter i{display:block;height:100%;background:linear-gradient(90deg,#b34a2d,#ffb34d)}
-#volcanoDiscovery button:disabled{opacity:.45;cursor:not-allowed}
+#volcanoDiscovery.spell-card{display:flex;flex-direction:column;text-align:left;width:100%;min-width:0;min-height:0;cursor:default;box-sizing:border-box}
+#volcanoDiscovery.locked{filter:grayscale(1);opacity:.58}
+#volcanoDiscovery .volcano-requirements{font-size:10px;line-height:1.6;margin-top:8px;color:inherit}
+#volcanoDiscovery .volcano-meter{height:4px;background:#18241a;border-radius:8px;overflow:hidden;margin:4px 0 8px}
+#volcanoDiscovery .volcano-meter i{display:block;height:100%;background:var(--spell-color)}
+#volcanoDiscovery button:disabled{opacity:.55;cursor:not-allowed}
+#volcanoDiscovery .volcano-learn{margin-top:auto;min-height:35px;width:100%;font-size:10px;white-space:normal}
 #volcanoUnlock{position:fixed;inset:0;z-index:2147483646;background:radial-gradient(circle,#74200a,#160b0b 72%);display:grid;place-items:center;text-align:center;color:#ffdfae;padding:20px}
 #volcanoUnlock[hidden]{display:none!important}
 #volcanoUnlock .volcano-ring{font-size:80px;animation:volcanoPulse 1.7s ease-in-out infinite;filter:drop-shadow(0 0 25px #ff6b18)}
@@ -1711,20 +1713,29 @@ for(const section of [shop,forge])section.classList.add('craft-page');renderShop
 const SPELL_NAME='Herz des Vulkans',REQ_MAGIC=650,REQ_INT=450;
 const host=document.getElementById('spellList');
 if(!host)return;
-const card=document.createElement('div');card.id='volcanoDiscovery';host.before(card);
+const card=document.createElement('div');card.id='volcanoDiscovery';card.className='spell-card';card.style.setProperty('--spell-color','#e7aa83');
 const overlay=document.createElement('div');overlay.id='volcanoUnlock';overlay.hidden=true;document.body.append(overlay);
 const safe=n=>Math.max(0,Number(n)||0);
 function known(){return (S.spells||[]).some(sp=>sp.name===SPELL_NAME)}
 function current(){return {magic:safe(sealedBase('magic')),intelligence:safe(sealedBase('intelligence'))}}
 function renderCard(){
  const {magic,intelligence}=current(),ready=magic>=REQ_MAGIC&&intelligence>=REQ_INT,learned=known();
- card.classList.toggle('locked',!ready&&!learned);
- const meter=(label,value,required)=>'<div style="font-size:12px">'+label+': '+Math.floor(value)+' / '+required+'</div><div class="volcano-meter"><i style="width:'+Math.min(100,value/required*100)+'%"></i></div>';
- card.innerHTML='<div style="font-size:11px;letter-spacing:2px">🔥 ENTDECKTES GRIMOIRE · LEGENDÄR</div><h3>'+SPELL_NAME+'</h3><p style="font-size:12px">Feuer · Dauerzauber · Vulkanische Verstärkung</p>'+
- (learned?'<p>✓ Erlernt – im Grimoire verfügbar.</p>':meter('Magie',magic,REQ_MAGIC)+meter('Intelligenz',intelligence,REQ_INT)+
- '<p style="font-size:12px">+35 % Stärke · +20 % Magie · 150 Mana Aktivierung · 12 Mana/Sek. (Stufe 1)</p>'+
- '<button type="button" class="btn primary" id="learnVolcano" '+(!ready?'disabled':'')+'>'+(ready?'🔥 Zauber erlernen':'🔒 Voraussetzungen nicht erfüllt')+'</button>');
- const btn=document.getElementById('learnVolcano');if(btn)btn.onclick=learn;
+ if(learned){card.remove();return}
+ const chosen=document.getElementById('spellFilterElement')?.value||'Alle';
+ if(chosen!=='Alle'&&chosen!=='Feuer'){card.remove();return}
+ const grid=host.querySelector('.tome-grid:last-of-type')||host.querySelector('.tome-grid');
+ if(grid){grid.appendChild(card)}
+ else {if(card.parentElement!==host)host.appendChild(card)}
+ card.classList.toggle('locked',!ready);
+ const meter=(label,value,required)=>'<div>'+label+': '+Math.floor(value)+' / '+required+'</div><div class="volcano-meter"><i style="width:'+Math.min(100,value/required*100)+'%"></i></div>';
+ card.innerHTML='<span class="spell-card-meta"><span>Feuer · Legendär</span><small>🔒</small></span>'+
+ '<span class="spell-sigil" aria-hidden="true">🔥</span>'+
+ '<span class="spell-card-name">'+SPELL_NAME+'</span>'+
+ '<span class="spell-card-cost">12 Mana / Sekunde<small>150 Mana Start</small></span>'+
+ '<span class="spell-card-desc">Vulkanische Verstärkung · +35 % Stärke · +20 % Magie</span>'+
+ '<span class="volcano-requirements">'+meter('Magie',magic,REQ_MAGIC)+meter('Intelligenz',intelligence,REQ_INT)+'</span>'+
+ '<button type="button" class="btn volcano-learn" id="learnVolcano" '+(!ready?'disabled':'')+'>'+(ready?'🔥 Zauber erlernen':'🔒 Noch nicht erlernbar')+'</button>';
+ document.getElementById('learnVolcano').onclick=learn;
 }
 function learn(){
  if(known())return;
