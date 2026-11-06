@@ -1227,13 +1227,13 @@ reduced.addEventListener('change',()=>{if(reduced.matches)stop()});addEventListe
 const reduced=matchMedia('(prefers-reduced-motion: reduce)'),roman=['','I','II','III','IV','V'];
 const colors=['','#e7bc7e','#e99c6f','#e37f71','#db849f','#bba0ed'];
 const layer=document.createElement('div');layer.id='sealBreakEffect';layer.hidden=true;layer.setAttribute('aria-hidden','true');
-const topLayer=typeof layer.showPopover==='function';if(topLayer)layer.setAttribute('popover','manual');
+let topLayer=typeof layer.showPopover==='function';if(topLayer)layer.setAttribute('popover','manual');
 document.body.append(layer);
 const status=document.createElement('div');status.className='seal-announcement';status.setAttribute('role','status');status.setAttribute('aria-live','polite');document.body.append(status);
 const style=document.createElement('style');style.textContent=`
 #sealBreakEffect{position:fixed;inset:0;width:100%;height:100vh;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;overflow:hidden;background:transparent;color:#f7ead4;pointer-events:none!important;z-index:2147483646;font-family:system-ui;isolation:isolate}
 #sealBreakEffect[hidden]{display:none!important}#sealBreakEffect::backdrop{background:transparent;pointer-events:none}
-#sealBreakEffect .seal-scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 45%,#171020c9 0%,#0b0e14d1 45%,#080c128a 100%);pointer-events:none}
+#sealBreakEffect .seal-scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 45%,#171020ed 0%,#0b0e14eb 45%,#080c12bb 100%);pointer-events:none}
 #sealBreakEffect .seal-aura{position:absolute;width:min(110vw,660px);height:min(110vw,660px);border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--seal-color) 16%,transparent),transparent 65%);filter:blur(8px)}
 #sealBreakEffect .seal-disc{position:relative;width:min(68vw,300px);aspect-ratio:1;flex:none}#sealBreakEffect svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--seal-color) 30%,transparent))}
 #sealBreakEffect .seal-number{position:absolute;inset:0;display:grid;place-items:center;font:400 clamp(40px,12vw,62px) Georgia,serif;color:var(--seal-color);text-shadow:0 0 30px color-mix(in srgb,var(--seal-color) 40%,transparent)}
@@ -1247,28 +1247,34 @@ const style=document.createElement('style');style.textContent=`
 .seal-announcement{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 `;document.head.append(style);
 let pending=window.__sealBreakPending||null,animations=[],timer=null;
-function clear(){clearTimeout(timer);timer=null;animations.forEach(a=>a.cancel());animations=[];if(topLayer&&layer.matches(':popover-open'))layer.hidePopover();layer.hidden=true;layer.replaceChildren()}
+function clear(){clearTimeout(timer);timer=null;animations.forEach(a=>a.cancel());animations=[];if(topLayer&&layer.matches(':popover-open')){try{layer.hidePopover()}catch{}}layer.hidden=true;layer.replaceChildren();if(layer.parentElement!==document.body)document.body.append(layer)}
 function animate(node,keyframes,options){if(!node||typeof node.animate!=='function')return;const a=node.animate(keyframes,options);animations.push(a);return a}
 function ring(){const point=(r,a)=>[160+Math.cos(a)*r,160+Math.sin(a)*r],wedge=(i)=>{const a=i*Math.PI/4+.045,z=(i+1)*Math.PI/4-.045,p=point(114,a),q=point(114,z),u=point(91,z),v=point(91,a);return'M'+p+' A114 114 0 0 1 '+q+' L'+u+' A91 91 0 0 0 '+v+' Z'};
  return '<svg viewBox="0 0 320 320" fill="none" aria-hidden="true"><circle cx="160" cy="160" r="143" stroke="var(--seal-color)" stroke-opacity=".25" stroke-dasharray="2 12"/><circle class="seal-orbit" cx="160" cy="160" r="132" stroke="var(--seal-color)" stroke-opacity=".55" stroke-dasharray="42 12 4 12"/>'+Array.from({length:8},(_,i)=>'<g class="seal-shard" data-angle="'+(i+.5)*Math.PI/4+'"><path d="'+wedge(i)+'" fill="var(--seal-color)" fill-opacity=".09" stroke="var(--seal-color)" stroke-width="1.2"/></g>').join('')+'<g class="seal-core"><path d="M160 82 228 199H92Z M160 238 92 121h136Z" stroke="var(--seal-color)" stroke-opacity=".35"/><circle cx="160" cy="160" r="66" stroke="var(--seal-color)" stroke-opacity=".65"/><path d="m160 20 5 12-5 12-5-12Zm140 140-12 5-12-5 12-5ZM160 300l-5-12 5-12 5 12ZM20 160l12-5 12 5-12 5Z" fill="var(--seal-color)" fill-opacity=".5"/></g><g class="seal-crack"><path d="m143 44 9 48-14 24 23 34-9 31 21 31-12 57M68 130l49 9 33 19M160 170l34 9 23-14 36 15"/></g></svg>';
 }
-function show(event){const level=Number(event?.level);if(level<1||level>5||pact().broken!==level)return;if(document.hidden){pending=event;return}pending=null;clear();if(window.__sealBreakPending===event)delete window.__sealBreakPending;
- layer.style.setProperty('--seal-color',colors[level]);const title=level===5?'Alle Siegel gebrochen':'Siegel '+roman[level]+' gebrochen',power=Math.round(SEAL_POWER[level]*100)+' % Kraft'+(level>=4?' · Dämonische Übernahme':' freigesetzt');status.textContent=title+'. '+power+'.';
- const still=reduced.matches||typeof layer.animate!=='function';layer.innerHTML=still?'<div class="seal-notice"><strong>'+title+'</strong><span>'+power+'</span></div>':'<div class="seal-scene"><div class="seal-aura"></div><div class="seal-disc">'+ring()+'<div class="seal-number">'+roman[level]+'</div></div><div class="seal-word">Die Bindung zerbricht</div><div class="seal-title">'+title+'</div><div class="seal-power">'+power+'</div></div>';
- layer.hidden=false;if(topLayer)layer.showPopover();
- if(still){timer=setTimeout(clear,2300);return}
- const scene=layer.querySelector('.seal-scene');animate(scene,[{opacity:0},{opacity:1,offset:.12},{opacity:1,offset:.73},{opacity:0}],{duration:1850,fill:'both',easing:'ease-out'});
- animate(layer.querySelector('.seal-disc'),[{transform:'scale(.84)',opacity:0},{transform:'scale(1)',opacity:1,offset:.18},{transform:'scale(1.03)',opacity:1,offset:.52},{transform:'scale(1.14)',opacity:0}],{duration:1500,fill:'both',easing:'ease-out'});
- animate(layer.querySelector('.seal-orbit'),[{transform:'rotate(-14deg)',transformOrigin:'160px 160px'},{transform:'rotate(20deg)',transformOrigin:'160px 160px'}],{duration:1700,fill:'both'});
- layer.querySelectorAll('.seal-shard').forEach((node,i)=>{const a=Number(node.dataset.angle),distance=34+level*7;animate(node,[{transform:'translate(0,0)',opacity:1},{transform:'translate(0,0)',opacity:1,offset:.28},{transform:'translate('+Math.cos(a)*distance+'px,'+Math.sin(a)*distance+'px) rotate('+(i%2?10:-10)+'deg)',opacity:0}],{duration:1350,fill:'both',easing:'cubic-bezier(.22,.65,.3,1)'})});
- animate(layer.querySelector('.seal-crack'),[{opacity:0},{opacity:1,offset:.2},{opacity:0}],{duration:1000,fill:'both'});
- for(let i=0;i<22;i++){const spark=document.createElement('i');spark.className='seal-spark';scene.append(spark);const a=i/22*Math.PI*2,distance=100+(i%5)*24;animate(spark,[{transform:'translate(0,0) scale(0)',opacity:0},{transform:'translate('+Math.cos(a)*28+'px,'+Math.sin(a)*28+'px) scale(1)',opacity:.8,offset:.2},{transform:'translate('+Math.cos(a)*distance+'px,'+Math.sin(a)*distance+'px) scale(.4)',opacity:0}],{duration:1150,delay:230+(i%4)*35,fill:'both',easing:'ease-out'})}
+function show(event){const level=Number(event?.level);if(level<1||level>5||(!event.preview&&pact().broken!==level))return;if(document.hidden){pending=event;return}pending=null;clear();if(window.__sealBreakPending===event)delete window.__sealBreakPending;
+ layer.style.setProperty('--seal-color',colors[level]);const title=level===5?'Alle Siegel gebrochen':'Siegel '+roman[level]+' gebrochen',power=Math.round(SEAL_POWER[level]*100)+' % Kraft'+(level>=4?' · Dämonische Übernahme':' freigesetzt');status.textContent=(event.preview?'Vorschau. ':'')+title+'. '+power+'.';
+ const still=reduced.matches||typeof layer.animate!=='function';layer.innerHTML=still?'<div class="seal-notice"><strong>'+title+'</strong><span>'+power+'</span></div>':'<div class="seal-scene"><div class="seal-aura"></div><div class="seal-disc">'+ring()+'<div class="seal-number">'+roman[level]+'</div></div><div class="seal-word">'+(event.preview?'Vorschau · Siegel-Effekt':'Die Bindung zerbricht')+'</div><div class="seal-title">'+title+'</div><div class="seal-power">'+power+'</div></div>';
+ layer.hidden=false;if(topLayer){try{layer.showPopover()}catch{topLayer=false;layer.removeAttribute('popover')}}if(!topLayer){const dialogs=[...document.querySelectorAll('dialog[open]')];(dialogs.at(-1)||document.body).append(layer)}
+ if(still){timer=setTimeout(clear,2850);return}
+ const scene=layer.querySelector('.seal-scene');animate(scene,[{opacity:0},{opacity:1,offset:.12},{opacity:1,offset:.73},{opacity:0}],{duration:2800,fill:'both',easing:'ease-out'});
+ animate(layer.querySelector('.seal-disc'),[{transform:'scale(.84)',opacity:0},{transform:'scale(1)',opacity:1,offset:.18},{transform:'scale(1.03)',opacity:1,offset:.52},{transform:'scale(1.14)',opacity:0}],{duration:2300,fill:'both',easing:'ease-out'});
+ animate(layer.querySelector('.seal-orbit'),[{transform:'rotate(-14deg)',transformOrigin:'160px 160px'},{transform:'rotate(20deg)',transformOrigin:'160px 160px'}],{duration:2450,fill:'both'});
+ layer.querySelectorAll('.seal-shard').forEach((node,i)=>{const a=Number(node.dataset.angle),distance=34+level*7;animate(node,[{transform:'translate(0,0)',opacity:1},{transform:'translate(0,0)',opacity:1,offset:.28},{transform:'translate('+Math.cos(a)*distance+'px,'+Math.sin(a)*distance+'px) rotate('+(i%2?10:-10)+'deg)',opacity:0}],{duration:1800,fill:'both',easing:'cubic-bezier(.22,.65,.3,1)'})});
+ animate(layer.querySelector('.seal-crack'),[{opacity:0},{opacity:1,offset:.2},{opacity:0}],{duration:1250,fill:'both'});
+ for(let i=0;i<22;i++){const spark=document.createElement('i');spark.className='seal-spark';scene.append(spark);const a=i/22*Math.PI*2,distance=100+(i%5)*24;animate(spark,[{transform:'translate(0,0) scale(0)',opacity:0},{transform:'translate('+Math.cos(a)*28+'px,'+Math.sin(a)*28+'px) scale(1)',opacity:.8,offset:.2},{transform:'translate('+Math.cos(a)*distance+'px,'+Math.sin(a)*distance+'px) scale(.4)',opacity:0}],{duration:1500,delay:230+(i%4)*35,fill:'both',easing:'ease-out'})}
  for(const selector of ['.seal-word','.seal-title','.seal-power'])animate(layer.querySelector(selector),[{opacity:0,transform:'translateY(7px)'},{opacity:1,transform:'translateY(0)'}],{duration:380,delay:220,fill:'both',easing:'ease-out'});
- timer=setTimeout(clear,1900);
+ timer=setTimeout(clear,2850);
 }
 addEventListener('rpg:seal-break',event=>{const detail=event.detail;queueMicrotask(()=>show(detail))});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){clear()}else if(pending)show(pending)});
-reduced.addEventListener('change',()=>{clear()});
+reduced.addEventListener('change',()=>{clear();updateModeNote()});
+window.previewSealBreakEffect=function(){show({level:Math.max(1,Math.min(5,pact().broken)),when:Date.now(),preview:true})};
+const panel=document.getElementById('sealPanel');
+let modeNote=null;
+if(panel){const controls=document.createElement('div');controls.className='row';controls.style.cssText='margin:14px 0;gap:10px';const button=document.createElement('button');button.id='sealEffectTest';button.type='button';button.className='btn';button.textContent='Animation testen';button.addEventListener('click',window.previewSealBreakEffect);modeNote=document.createElement('span');modeNote.className='small';controls.append(button,modeNote);panel.before(controls)}
+function updateModeNote(){if(modeNote)modeNote.textContent=reduced.matches?'Reduzierte Bewegung: ruhige Einblendung aktiv.':'Vorschau ohne Siegelbruch.'}
+updateModeNote();
 if(pending)show(pending);
 })();
 
